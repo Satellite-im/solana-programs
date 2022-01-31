@@ -18,9 +18,10 @@ describe('groupchats', () => {
   const inviteSeed = Buffer.from(anchor.utils.bytes.utf8.encode("invite"))
 
   const textileKey = "dhfskjdfhsdjkfhsdjkfhdsjkhdjkfdhfskjdfhsdjkfhsdjkfhdsjkhdjkfdfrt"
+  const threadHash = Buffer.from(anchor.utils.bytes.utf8.encode("dhfskjdfhsdjkfhsdjkfhdsjkhdjkfvf"))
 
   // Accounts for the tests.
-  const group = anchor.utils.publicKey.findProgramAddressSync([groupSeed], program.programId)
+  const group = anchor.utils.publicKey.findProgramAddressSync([threadHash, groupSeed], program.programId)
   const user1 = anchor.web3.Keypair.generate();
   const inv1 = anchor.utils.publicKey.findProgramAddressSync([user1.publicKey.toBytes(), group[0].toBytes(), inviteSeed], program.programId)
   const user2 = anchor.web3.Keypair.generate();
@@ -36,7 +37,7 @@ describe('groupchats', () => {
       await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
       "confirmed"
     );
-    await program.rpc.create(textileKey, true, {
+    await program.rpc.create(threadHash, textileKey, true, {
       accounts: {
         group: group[0],
         invitation: inv1[0],
