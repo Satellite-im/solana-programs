@@ -10,7 +10,7 @@ pub mod groupchats {
     use super::*;
 
 
-    pub fn create(ctx: Context<Create>, thread_id: String, open_invites: bool) -> ProgramResult {
+    pub fn create(ctx: Context<Create>, _thread_hash: String, thread_id: String, open_invites: bool) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let invitation = &mut ctx.accounts.invitation;
         group.creator = ctx.accounts.user.key();
@@ -62,10 +62,11 @@ pub mod groupchats {
 }
 
 #[derive(Accounts)]
+#[instruction(thread_hash: String)]
 pub struct Create<'info> {
     #[account(init,
         payer = user,
-        seeds = [GROUP_PDA_SEED], // TODO: Set proper seed
+        seeds = [&thread_hash.as_bytes()[..32], GROUP_PDA_SEED],
         bump
     )]
     pub group: Account<'info, Group>,
