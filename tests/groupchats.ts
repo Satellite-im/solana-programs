@@ -18,8 +18,9 @@ describe('groupchats', () => {
 
   const textileKey =
     'dhfskjdfhsdjkfhsdjkfhdsjkhdjkfdhfskjdfhsdjkfhsdjkfhdsjkhdjkfdfrt'
-  const threadHash = Buffer.from(anchor.utils.bytes.utf8.encode(
-    'dhfskjdfhsdjkfhsdjkfhdsjkhdjkfds'))
+  const threadHash = Buffer.from(
+    anchor.utils.bytes.utf8.encode('dhfskjdfhsdjkfhsdjkfhdsjkhdjkfds'),
+  )
 
   // Accounts for the tests.
   const group = anchor.utils.publicKey.findProgramAddressSync(
