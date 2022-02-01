@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("BKYHC1UxAAvaeZagebJdQYumzVYuDfNhd6Apm3bhb6TA");
 
 const GROUP_PDA_SEED: &[u8] = b"groupchat";
 const INVITE_PDA_SEED: &[u8] = b"invite";
@@ -64,13 +64,15 @@ pub mod groupchats {
 #[derive(Accounts)]
 #[instruction(thread_hash: String)]
 pub struct Create<'info> {
-    #[account(init,
+    #[account(
+        init,
         payer = user,
         seeds = [&thread_hash.as_bytes()[..32], GROUP_PDA_SEED],
         bump
     )]
     pub group: Account<'info, Group>,
-    #[account(init,
+    #[account(
+        init,
         payer = user,
         space = 8+32+32+32+4+64,
         seeds = [&user.key.to_bytes()[..32], &group.key().to_bytes()[..32], INVITE_PDA_SEED],
@@ -85,7 +87,8 @@ pub struct Create<'info> {
 #[derive(Accounts)]
 #[instruction(thread_id: String, recipient: Pubkey)]
 pub struct Invite<'info> {
-    #[account(init,
+    #[account(
+        init,
         payer = user,
         space = 8+32+32+32+4+64,
         seeds = [&recipient.to_bytes()[..32], &group.key().to_bytes()[..32], INVITE_PDA_SEED],
