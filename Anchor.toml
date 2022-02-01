@@ -1,12 +1,12 @@
 [programs.localnet]
-groupchats = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+groupchats = "BKYHC1UxAAvaeZagebJdQYumzVYuDfNhd6Apm3bhb6TA"
 
 [registry]
 url = "https://anchor.projectserum.com"
 
 [provider]
 cluster = "localnet"
-wallet = "/Users/mattwhite/.config/solana/id.json"
+wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
