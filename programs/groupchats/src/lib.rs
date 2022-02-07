@@ -9,15 +9,14 @@ const INVITE_PDA_SEED: &[u8] = b"invite";
 pub mod groupchats {
     use super::*;
 
-
     pub fn create(ctx: Context<Create>, _thread_hash: String, thread_id: String, open_invites: bool) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let invitation = &mut ctx.accounts.invitation;
-        group.creator = ctx.accounts.user.key();
+        group.creator = ctx.accounts.payer.key();
         group.admin = ctx.accounts.user.key();
         group.open_invites = open_invites;
         group.members = 1;
-        invitation.sender = ctx.accounts.user.key();
+        invitation.sender = ctx.accounts.payer.key();
         invitation.group_id = group.key();
         invitation.recipient = ctx.accounts.user.key();
         invitation.thread_id = thread_id;
@@ -28,7 +27,7 @@ pub mod groupchats {
         let group = &mut ctx.accounts.group;
         let new_invitation = &mut ctx.accounts.new_invitation;
         group.members += 1;
-        new_invitation.sender = ctx.accounts.user.key();
+        new_invitation.sender = ctx.accounts.payer.key();
         new_invitation.group_id = group.key();
         new_invitation.recipient = recipient;
         new_invitation.thread_id = thread_id;
@@ -66,14 +65,14 @@ pub mod groupchats {
 pub struct Create<'info> {
     #[account(
         init,
-        payer = user,
+        payer = payer,
         seeds = [&thread_hash.as_bytes()[..32], GROUP_PDA_SEED],
         bump
     )]
     pub group: Account<'info, Group>,
     #[account(
         init,
-        payer = user,
+        payer = payer,
         space = 8+32+32+32+4+64,
         seeds = [&user.key.to_bytes()[..32], &group.key().to_bytes()[..32], INVITE_PDA_SEED],
         bump
@@ -81,6 +80,8 @@ pub struct Create<'info> {
     pub invitation: Account<'info, Invitation>,
     #[account(mut)]
     pub user: Signer<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -89,7 +90,7 @@ pub struct Create<'info> {
 pub struct Invite<'info> {
     #[account(
         init,
-        payer = user,
+        payer = payer,
         space = 8+32+32+32+4+64,
         seeds = [&recipient.to_bytes()[..32], &group.key().to_bytes()[..32], INVITE_PDA_SEED],
         bump
@@ -107,6 +108,8 @@ pub struct Invite<'info> {
     pub invitation: Account<'info, Invitation>,
     #[account(mut)]
     pub user: Signer<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -162,7 +165,8 @@ pub struct AdminLeave<'info> {
     pub invitation: Account<'info, Invitation>,
     #[account(
         mut,
-        constraint = successor.group_id == group.key() @ ErrorCode::InvitationMismatch
+        constraint = successor.group_id == group.key() &&
+                     successor.recipient != invitation.recipient @ ErrorCode::InvitationMismatch
     )]
     pub successor: Account<'info, Invitation>,
     pub user: Signer<'info>,
