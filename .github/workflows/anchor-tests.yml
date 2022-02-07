@@ -20,8 +20,8 @@ jobs:
           npm install -g yarn
           npm i -g @project-serum/anchor-cli
       - name: Run tests
+        run: |
           cd ${{ github.workspace }}
-          cd ./programs/groupchats
           yarn install
           solana-keygen new
           anchor test
