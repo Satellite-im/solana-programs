@@ -16,15 +16,15 @@ describe('groupchats', () => {
   const groupSeed = Buffer.from(anchor.utils.bytes.utf8.encode('groupchat'))
   const inviteSeed = Buffer.from(anchor.utils.bytes.utf8.encode('invite'))
 
-  const textileKey =
+  const groupId =
     'dhfskjdfhsdjkfhsdjkfhdsjkhdjkfdhfskjdfhsdjkfhsdjkfhdsjkhdjkfdfrt'
-  const threadHash = Buffer.from(
+  const groupHash = Buffer.from(
     anchor.utils.bytes.utf8.encode('dhfskjdfhsdjkfhsdjkfhdsjkhdjkfds'),
   )
 
   // Accounts for the tests.
   const group = anchor.utils.publicKey.findProgramAddressSync(
-    [threadHash, groupSeed],
+    [groupHash, groupSeed],
     program.programId,
   )
   const user1 = anchor.web3.Keypair.generate()
@@ -54,11 +54,11 @@ describe('groupchats', () => {
       await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
       'confirmed',
     )
-    await program.rpc.create(threadHash, textileKey, true, {
+    await program.rpc.create(groupHash, groupId, true, {
       accounts: {
         group: group[0],
         invitation: inv1[0],
-        user: user1.publicKey,
+        signer: user1.publicKey,
         payer: user1.publicKey,
         systemProgram: SystemProgram.programId,
       },
@@ -73,12 +73,12 @@ describe('groupchats', () => {
   })
 
   it('Admin invites new user', async () => {
-    await program.rpc.invite(textileKey, user2.publicKey, {
+    await program.rpc.invite(groupId, user2.publicKey, {
       accounts: {
         newInvitation: inv2[0],
         group: group[0],
         invitation: inv1[0],
-        user: user1.publicKey,
+        signer: user1.publicKey,
         payer: user1.publicKey,
         systemProgram: SystemProgram.programId,
       },
@@ -99,12 +99,12 @@ describe('groupchats', () => {
       'confirmed',
     )
 
-    await program.rpc.invite(textileKey, user3.publicKey, {
+    await program.rpc.invite(groupId, user3.publicKey, {
       accounts: {
         newInvitation: inv3[0],
         group: group[0],
         invitation: inv2[0],
-        user: user2.publicKey,
+        signer: user2.publicKey,
         payer: user2.publicKey,
         systemProgram: SystemProgram.programId,
       },
@@ -137,12 +137,12 @@ describe('groupchats', () => {
 
   it('User now cannot invite new user', async () => {
     try {
-      await program.rpc.invite(textileKey, user4.publicKey, {
+      await program.rpc.invite(groupId, user4.publicKey, {
         accounts: {
           newInvitation: inv4[0],
           group: group[0],
           invitation: inv2[0],
-          user: user2.publicKey,
+          signer: user2.publicKey,
           payer: user2.publicKey,
           systemProgram: SystemProgram.programId,
         },
@@ -186,7 +186,7 @@ describe('groupchats', () => {
           group: group[0],
           invitation: inv2[0],
           successor: inv1[0],
-          user: user2.publicKey,
+          signer: user2.publicKey,
           invitationSender: user1.publicKey,
         },
         signers: [user2],
@@ -208,7 +208,7 @@ describe('groupchats', () => {
         accounts: {
           group: group[0],
           invitation: inv2[0],
-          user: user2.publicKey,
+          signer: user2.publicKey,
           invitationSender: user2.publicKey,
         },
         signers: [user2],
@@ -229,7 +229,7 @@ describe('groupchats', () => {
       accounts: {
         group: group[0],
         invitation: inv2[0],
-        user: user2.publicKey,
+        signer: user2.publicKey,
         invitationSender: user1.publicKey,
       },
       signers: [user2],
@@ -241,12 +241,12 @@ describe('groupchats', () => {
   })
 
   it('Admin invites old user back', async () => {
-    await program.rpc.invite(textileKey, user2.publicKey, {
+    await program.rpc.invite(groupId, user2.publicKey, {
       accounts: {
         newInvitation: inv2[0],
         group: group[0],
         invitation: inv1[0],
-        user: user1.publicKey,
+        signer: user1.publicKey,
         payer: user1.publicKey,
         systemProgram: SystemProgram.programId,
       },
@@ -266,7 +266,7 @@ describe('groupchats', () => {
         accounts: {
           group: group[0],
           invitation: inv1[0],
-          user: user1.publicKey,
+          signer: user1.publicKey,
           invitationSender: user1.publicKey,
         },
         signers: [user1],
@@ -288,7 +288,7 @@ describe('groupchats', () => {
           group: group[0],
           invitation: inv1[0],
           successor: inv2[0],
-          user: user1.publicKey,
+          signer: user1.publicKey,
           invitationSender: user2.publicKey,
         },
         signers: [user1],
@@ -310,7 +310,7 @@ describe('groupchats', () => {
         group: group[0],
         invitation: inv1[0],
         successor: inv2[0],
-        user: user1.publicKey,
+        signer: user1.publicKey,
         invitationSender: user1.publicKey,
       },
       signers: [user1],
@@ -344,7 +344,7 @@ describe('groupchats', () => {
         accounts: {
           group: group[0],
           invitation: inv3[0],
-          user: user3.publicKey,
+          signer: user3.publicKey,
           creator: user1.publicKey,
           invitationSender: user2.publicKey,
         },
@@ -366,7 +366,7 @@ describe('groupchats', () => {
         accounts: {
           group: group[0],
           invitation: inv2[0],
-          user: user2.publicKey,
+          signer: user2.publicKey,
           creator: user1.publicKey,
           invitationSender: user1.publicKey,
         },
@@ -387,7 +387,7 @@ describe('groupchats', () => {
       accounts: {
         group: group[0],
         invitation: inv2[0],
-        user: user3.publicKey,
+        signer: user3.publicKey,
         invitationSender: user1.publicKey,
       },
       signers: [user3],
@@ -403,7 +403,7 @@ describe('groupchats', () => {
         accounts: {
           group: group[0],
           invitation: inv3[0],
-          user: user3.publicKey,
+          signer: user3.publicKey,
           creator: user2.publicKey,
           invitationSender: user2.publicKey,
         },
@@ -424,7 +424,7 @@ describe('groupchats', () => {
       accounts: {
         group: group[0],
         invitation: inv3[0],
-        user: user3.publicKey,
+        signer: user3.publicKey,
         creator: user1.publicKey,
         invitationSender: user2.publicKey,
       },

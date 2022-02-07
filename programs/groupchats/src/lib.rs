@@ -9,28 +9,28 @@ const INVITE_PDA_SEED: &[u8] = b"invite";
 pub mod groupchats {
     use super::*;
 
-    pub fn create(ctx: Context<Create>, _thread_hash: String, thread_id: String, open_invites: bool) -> ProgramResult {
+    pub fn create(ctx: Context<Create>, _group_hash: String, group_id: String, open_invites: bool) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let invitation = &mut ctx.accounts.invitation;
         group.creator = ctx.accounts.payer.key();
-        group.admin = ctx.accounts.user.key();
+        group.admin = ctx.accounts.signer.key();
         group.open_invites = open_invites;
         group.members = 1;
         invitation.sender = ctx.accounts.payer.key();
-        invitation.group_id = group.key();
-        invitation.recipient = ctx.accounts.user.key();
-        invitation.thread_id = thread_id;
+        invitation.group_key = group.key();
+        invitation.recipient = ctx.accounts.signer.key();
+        invitation.group_id = group_id;
         Ok(())
     }
 
-    pub fn invite(ctx: Context<Invite>, thread_id: String, recipient: Pubkey) -> ProgramResult {
+    pub fn invite(ctx: Context<Invite>, group_id: String, recipient: Pubkey) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let new_invitation = &mut ctx.accounts.new_invitation;
         group.members += 1;
         new_invitation.sender = ctx.accounts.payer.key();
-        new_invitation.group_id = group.key();
+        new_invitation.group_key = group.key();
         new_invitation.recipient = recipient;
-        new_invitation.thread_id = thread_id;
+        new_invitation.group_id = group_id;
         Ok(())
     }
 
@@ -61,12 +61,12 @@ pub mod groupchats {
 }
 
 #[derive(Accounts)]
-#[instruction(thread_hash: String)]
+#[instruction(group_hash: String)]
 pub struct Create<'info> {
     #[account(
         init,
         payer = payer,
-        seeds = [&thread_hash.as_bytes()[..32], GROUP_PDA_SEED],
+        seeds = [&group_hash.as_bytes()[..32], GROUP_PDA_SEED],
         bump
     )]
     pub group: Account<'info, Group>,
@@ -74,12 +74,12 @@ pub struct Create<'info> {
         init,
         payer = payer,
         space = 8+32+32+32+4+64,
-        seeds = [&user.key.to_bytes()[..32], &group.key().to_bytes()[..32], INVITE_PDA_SEED],
+        seeds = [&signer.key.to_bytes()[..32], &group.key().to_bytes()[..32], INVITE_PDA_SEED],
         bump
     )]
     pub invitation: Account<'info, Invitation>,
     #[account(mut)]
-    pub user: Signer<'info>,
+    pub signer: Signer<'info>,
     #[account(mut)]
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -98,16 +98,16 @@ pub struct Invite<'info> {
     pub new_invitation: Account<'info, Invitation>,
     #[account(
         mut,
-        constraint = (invitation.recipient == user.key() && group.open_invites) ||
-                     user.key() == group.admin @ ErrorCode::WrongPrivileges
+        constraint = (invitation.recipient == signer.key() && group.open_invites) ||
+                     signer.key() == group.admin @ ErrorCode::WrongPrivileges
     )]
     pub group: Account<'info, Group>,
     #[account(
-        constraint = group.key() == invitation.group_id @ ErrorCode::InvitationMismatch
+        constraint = group.key() == invitation.group_key @ ErrorCode::InvitationMismatch
     )]
     pub invitation: Account<'info, Invitation>,
     #[account(mut)]
-    pub user: Signer<'info>,
+    pub signer: Signer<'info>,
     #[account(mut)]
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -122,7 +122,7 @@ pub struct Modify<'info> {
     pub group: Account<'info, Group>,
     #[account(
         mut,
-        constraint = successor.group_id == group.key() @ ErrorCode::InvitationMismatch
+        constraint = successor.group_key == group.key() @ ErrorCode::InvitationMismatch
     )]
     pub successor: Account<'info, Invitation>,
     pub admin: Signer<'info>,
@@ -132,18 +132,18 @@ pub struct Modify<'info> {
 pub struct Leave<'info> {
     #[account(
         mut,
-        constraint = (user.key() != group.admin && user.key() == invitation.recipient) ||
-                     (user.key() == group.admin && user.key() != invitation.recipient) @ ErrorCode::WrongPrivileges
+        constraint = (signer.key() != group.admin && signer.key() == invitation.recipient) ||
+                     (signer.key() == group.admin && signer.key() != invitation.recipient) @ ErrorCode::WrongPrivileges
     )]
     pub group: Account<'info, Group>,
     #[account(
         mut,
         close = invitation_sender, 
         constraint = invitation_sender.key() == invitation.sender @ ErrorCode::PayerMismatch,
-        constraint = group.key() == invitation.group_id @ ErrorCode::InvitationMismatch
+        constraint = group.key() == invitation.group_key @ ErrorCode::InvitationMismatch
     )]
     pub invitation: Account<'info, Invitation>,
-    pub user: Signer<'info>,
+    pub signer: Signer<'info>,
     #[account(mut)]
     pub invitation_sender: SystemAccount<'info>,
 }
@@ -152,24 +152,24 @@ pub struct Leave<'info> {
 pub struct AdminLeave<'info> {
     #[account(
         mut,
-        constraint = user.key() == group.admin &&
-                     user.key() == invitation.recipient @ ErrorCode::WrongPrivileges
+        constraint = signer.key() == group.admin &&
+                     signer.key() == invitation.recipient @ ErrorCode::WrongPrivileges
     )]
     pub group: Account<'info, Group>,
     #[account(
         mut,
         close = invitation_sender, 
         constraint = invitation_sender.key() == invitation.sender @ ErrorCode::PayerMismatch,
-        constraint = group.key() == invitation.group_id @ ErrorCode::InvitationMismatch
+        constraint = group.key() == invitation.group_key @ ErrorCode::InvitationMismatch
     )]
     pub invitation: Account<'info, Invitation>,
     #[account(
         mut,
-        constraint = successor.group_id == group.key() &&
+        constraint = successor.group_key == group.key() &&
                      successor.recipient != invitation.recipient @ ErrorCode::InvitationMismatch
     )]
     pub successor: Account<'info, Invitation>,
-    pub user: Signer<'info>,
+    pub signer: Signer<'info>,
     #[account(mut)]
     pub invitation_sender: SystemAccount<'info>,
 }
@@ -179,7 +179,7 @@ pub struct Close<'info> {
     #[account(
         mut,
         close = creator, 
-        constraint = user.key() == group.admin @ ErrorCode::WrongPrivileges,
+        constraint = signer.key() == group.admin @ ErrorCode::WrongPrivileges,
         constraint = group.members == 1 @ ErrorCode::NotEmpty,
         constraint = group.creator == creator.key() @ ErrorCode::PayerMismatch
     )]
@@ -188,10 +188,10 @@ pub struct Close<'info> {
         mut,
         close = invitation_sender, 
         constraint = invitation_sender.key() == invitation.sender @ ErrorCode::PayerMismatch,
-        constraint = group.key() == invitation.group_id @ ErrorCode::InvitationMismatch
+        constraint = group.key() == invitation.group_key @ ErrorCode::InvitationMismatch
     )]
     pub invitation: Account<'info, Invitation>,
-    pub user: Signer<'info>,
+    pub signer: Signer<'info>,
     #[account(mut)]
     pub creator: SystemAccount<'info>,
     #[account(mut)]
@@ -210,9 +210,9 @@ pub struct Group {
 #[account]
 pub struct Invitation {
     pub sender: Pubkey,
-    pub group_id: Pubkey,
+    pub group_key: Pubkey,
     pub recipient: Pubkey,
-    pub thread_id: String,
+    pub group_id: String,
 }
 
 #[error]
