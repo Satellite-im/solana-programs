@@ -1,0 +1,49 @@
+name: Anchor tests
+on: [push]
+jobs:
+  Build:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: multiple paths
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: '${{ runner.os }}-${{ hashFiles(''TODO'') }}'
+      - uses: actions/checkout@v2
+      - run: |
+          rustup install stable
+          cargo --version
+          docker --version
+      - run: >-
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+      - run: >-
+          sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main"
+      - name: Update runner and install node & yarn
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openssl --allow-unauthenticated
+          sudo apt-get install -y libssl-dev --allow-unauthenticated
+          sudo apt-get install -y clang-7 --allow-unauthenticated
+          sudo apt-get install -y libssl1.1 --allow-unauthenticated
+          clang-7 --version
+          npm install node
+          node --version
+          npm install
+          npm install -g yarn
+      - name: Install Solana
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/v1.9.1/install)"
+          export PATH=~/.local/share/solana/install/active_release/bin:$PATH
+          solana-install info
+          solana-keygen new --no-bip39-passphrase
+      - name: Install Anchor
+        run: |
+          export PATH=~/.local/share/solana/install/active_release/bin:$PATH
+          npm i -g @project-serum/anchor-cli
+          cd ${{ github.workspace }}
+          yarn install      
+      - name: Run tests
+        run: |
+          export PATH=~/.local/share/solana/install/active_release/bin:$PATH
+          anchor test
+      - run: echo "🍏 This job's status is ${{ job.status }}."
