@@ -1,28 +1,40 @@
-name: GitHub Actions Demo
+name: Anchor tests
 on: [push]
 jobs:
-  Explore-GitHub-Actions:
-    runs-on: ubuntu-latest
+  Build:
+    runs-on: ubuntu-20.04
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v2
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: Install all the components
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-          source $HOME/.cargo/env
-          rustup -y component add rustfmt
-          sh -c "$(curl -sSfL https://release.solana.com/v1.9.1/install)"
+      - name: multiple paths
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: '${{ runner.os }}-${{ hashFiles(''TODO'') }}'
+      - uses: actions/checkout@v2
+      - run: |
+          rustup install stable
+          cargo --version
+          docker --version
+      - run: >-
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+      - run: >-
+          sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main"
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y openssl --allow-unauthenticated
+          sudo apt-get install -y libssl-dev --allow-unauthenticated
+          sudo apt-get install -y clang-7 --allow-unauthenticated
+          sudo apt-get install -y libssl1.1 --allow-unauthenticated
+          clang-7 --version
+          npm install node
+          node --version
+          npm install
+          sh -c "$(curl -sSfL https://release.solana.com/v1.8.2/install)"
+          export PATH=~/.local/share/solana/install/active_release/bin:$PATH
+          solana-install info
+          solana-keygen new --no-bip39-passphrase
           npm install -g yarn
           npm i -g @project-serum/anchor-cli
-      - name: Run tests
-        run: |
           cd ${{ github.workspace }}
           yarn install
-          solana-keygen new
           anchor test
       - run: echo "🍏 This job's status is ${{ job.status }}."
