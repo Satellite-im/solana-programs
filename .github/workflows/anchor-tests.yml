@@ -28,13 +28,18 @@ jobs:
           npm install node
           node --version
           npm install
+          npm install -g yarn
+      - run: |
           sh -c "$(curl -sSfL https://release.solana.com/v1.9.1/install)"
           export PATH=~/.local/share/solana/install/active_release/bin:$PATH
           solana-install info
           solana-keygen new --no-bip39-passphrase
-          npm install -g yarn
+      - run: |
+          export PATH=~/.local/share/solana/install/active_release/bin:$PATH
           npm i -g @project-serum/anchor-cli
           cd ${{ github.workspace }}
           yarn install
+      - run: |
+          export PATH=~/.local/share/solana/install/active_release/bin:$PATH
           anchor test
       - run: echo "🍏 This job's status is ${{ job.status }}."
