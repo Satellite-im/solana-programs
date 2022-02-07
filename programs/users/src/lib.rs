@@ -8,7 +8,6 @@ const USER_PDA_SEED: &[u8] = b"user";
 pub mod users {
     use super::*;
 
-
     pub fn create(ctx: Context<Create>, name: String, photo_hash: String, status: String) -> ProgramResult {
         let user = &mut ctx.accounts.user;
         user.name = name;
@@ -17,10 +16,20 @@ pub mod users {
         Ok(())
     }
 
-    pub fn modify(ctx: Context<Modify>, name: String, photo_hash: String, status: String) -> ProgramResult {
+    pub fn set_name(ctx: Context<Modify>, name: String) -> ProgramResult {
         let user = &mut ctx.accounts.user;
         user.name = name;
+        Ok(())
+    }
+
+    pub fn set_photo_hash(ctx: Context<Modify>, photo_hash: String) -> ProgramResult {
+        let user = &mut ctx.accounts.user;
         user.photo_hash = photo_hash;
+        Ok(())
+    }
+
+    pub fn set_status(ctx: Context<Modify>, status: String) -> ProgramResult {
+        let user = &mut ctx.accounts.user;
         user.status = status;
         Ok(())
     }
