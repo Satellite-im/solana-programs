@@ -18,7 +18,8 @@ jobs:
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
       - run: >-
           sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main"
-      - run: |
+      - name: Update runner and install node & yarn
+        run: |
           sudo apt-get update
           sudo apt-get install -y openssl --allow-unauthenticated
           sudo apt-get install -y libssl-dev --allow-unauthenticated
@@ -29,17 +30,20 @@ jobs:
           node --version
           npm install
           npm install -g yarn
-      - run: |
+      - name: Install Solana
+        run: |
           sh -c "$(curl -sSfL https://release.solana.com/v1.9.1/install)"
           export PATH=~/.local/share/solana/install/active_release/bin:$PATH
           solana-install info
           solana-keygen new --no-bip39-passphrase
-      - run: |
+      - name: Install Anchor
+        run: |
           export PATH=~/.local/share/solana/install/active_release/bin:$PATH
           npm i -g @project-serum/anchor-cli
           cd ${{ github.workspace }}
-          yarn install
-      - run: |
+          yarn install      
+      - name: Run tests
+        run: |
           export PATH=~/.local/share/solana/install/active_release/bin:$PATH
           anchor test
       - run: echo "🍏 This job's status is ${{ job.status }}."
