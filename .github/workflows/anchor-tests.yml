@@ -15,7 +15,7 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
           source $HOME/.cargo/env
-          rustup component add rustfmt -y
+          rustup -y component add rustfmt
           sh -c "$(curl -sSfL https://release.solana.com/v1.9.1/install)"
           npm install -g yarn
           npm i -g @project-serum/anchor-cli
