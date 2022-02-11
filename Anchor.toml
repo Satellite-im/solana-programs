@@ -1,5 +1,6 @@
 [programs.localnet]
 groupchats = "BKYHC1UxAAvaeZagebJdQYumzVYuDfNhd6Apm3bhb6TA"
+users = "MQoKr4WJAi9Yd59FjrvE3vWH2FKZk8PenjDjECTeGy3"
 
 [registry]
 url = "https://anchor.projectserum.com"
