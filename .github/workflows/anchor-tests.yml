@@ -8,7 +8,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.npm
-          key: '${{ runner.os }}-${{ hashFiles(''TODO'') }}'
+          key: "${{ runner.os }}-${{ hashFiles('TODO') }}"
       - uses: actions/checkout@v2
       - run: |
           rustup install stable
@@ -41,7 +41,7 @@ jobs:
           export PATH=~/.local/share/solana/install/active_release/bin:$PATH
           npm i -g @project-serum/anchor-cli
           cd ${{ github.workspace }}
-          yarn install      
+          yarn install
       - name: Run tests
         run: |
           export PATH=~/.local/share/solana/install/active_release/bin:$PATH
