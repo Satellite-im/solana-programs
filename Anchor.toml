@@ -1,6 +1,10 @@
 [programs.localnet]
-groupchats = "BKYHC1UxAAvaeZagebJdQYumzVYuDfNhd6Apm3bhb6TA"
-users = "MQoKr4WJAi9Yd59FjrvE3vWH2FKZk8PenjDjECTeGy3"
+groupchats = "bJhvwTYCkQceANgeShZ4xaxUqEBPsV8e1NgRnLRymxs"
+users = "7MaC2xrAmmFsuRBEkD6BEL3eJpXCmaikYhLM3eKBPhAH"
+
+[programs.devnet]
+groupchats = "bJhvwTYCkQceANgeShZ4xaxUqEBPsV8e1NgRnLRymxs"
+users = "7MaC2xrAmmFsuRBEkD6BEL3eJpXCmaikYhLM3eKBPhAH"
 
 [registry]
 url = "https://anchor.projectserum.com"
