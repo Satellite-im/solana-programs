@@ -78,7 +78,6 @@ pub struct Create<'info> {
         bump
     )]
     pub invitation: Account<'info, Invitation>,
-    #[account(mut)]
     pub signer: Signer<'info>,
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -106,7 +105,6 @@ pub struct Invite<'info> {
         constraint = group.key() == invitation.group_key @ ErrorCode::InvitationMismatch
     )]
     pub invitation: Account<'info, Invitation>,
-    #[account(mut)]
     pub signer: Signer<'info>,
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -121,7 +119,6 @@ pub struct Modify<'info> {
     )]
     pub group: Account<'info, Group>,
     #[account(
-        mut,
         constraint = successor.group_key == group.key() @ ErrorCode::InvitationMismatch
     )]
     pub successor: Account<'info, Invitation>,
@@ -164,7 +161,6 @@ pub struct AdminLeave<'info> {
     )]
     pub invitation: Account<'info, Invitation>,
     #[account(
-        mut,
         constraint = successor.group_key == group.key() &&
                      successor.recipient != invitation.recipient @ ErrorCode::InvitationMismatch
     )]
