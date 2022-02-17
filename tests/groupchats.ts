@@ -18,9 +18,7 @@ describe('groupchats', () => {
 
   const groupId =
     'dhfskjdfhsdjkfhsdjkfhdsjkhdjkfdhfskjdfhsdjkfhsdjkfhdsjkhdjkfdfrt'
-  const groupHash = Buffer.from(
-    anchor.utils.bytes.utf8.encode('dhfskjdfhsdjkfhsdjkfhdsjkhdjkfds'),
-  )
+  const groupHash = Buffer.from(anchor.utils.sha256.hash(groupId), 'hex')
 
   // Accounts for the tests.
   const group = anchor.utils.publicKey.findProgramAddressSync(

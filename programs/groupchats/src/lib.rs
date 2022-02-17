@@ -9,7 +9,7 @@ const INVITE_PDA_SEED: &[u8] = b"invite";
 pub mod groupchats {
     use super::*;
 
-    pub fn create(ctx: Context<Create>, _group_hash: String, group_id: String, open_invites: bool) -> ProgramResult {
+    pub fn create(ctx: Context<Create>, _group_hash: [u8; 32], group_id: String, open_invites: bool) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let invitation = &mut ctx.accounts.invitation;
         group.creator = ctx.accounts.payer.key();
@@ -61,12 +61,12 @@ pub mod groupchats {
 }
 
 #[derive(Accounts)]
-#[instruction(group_hash: String)]
+#[instruction(group_hash: [u8; 32])]
 pub struct Create<'info> {
     #[account(
         init,
         payer = payer,
-        seeds = [&group_hash.as_bytes()[..32], GROUP_PDA_SEED],
+        seeds = [&group_hash, GROUP_PDA_SEED],
         bump
     )]
     pub group: Account<'info, Group>,
