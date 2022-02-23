@@ -22,6 +22,9 @@ describe('groupchats', () => {
     anchor.utils.bytes.utf8.encode('dhfskjdfhsdjkfhsdjkfhdsjkhdjkfds'),
   )
 
+  let name = 'dhfskjdfhsdjkfh'
+
+console.log(program.programId.toString())
   // Accounts for the tests.
   const group = anchor.utils.publicKey.findProgramAddressSync(
     [groupHash, groupSeed],
@@ -54,7 +57,7 @@ describe('groupchats', () => {
       await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
       'confirmed',
     )
-    await program.rpc.create(groupHash, groupId, true, {
+    await program.rpc.create(groupHash, groupId, true, name, {
       accounts: {
         group: group[0],
         invitation: inv1[0],
@@ -118,11 +121,10 @@ describe('groupchats', () => {
     assert.ok(invitation2Account.recipient.equals(user3.publicKey))
   })
 
-  it('Admin modifies group settings', async () => {
-    await program.rpc.modify(false, {
+  it('Admin modifies group settings for open invites', async () => {
+    await program.rpc.modifyOpenIvites(false, {
       accounts: {
         group: group[0],
-        successor: inv1[0],
         admin: user1.publicKey,
       },
       signers: [user1],
@@ -132,7 +134,28 @@ describe('groupchats', () => {
 
     assert.ok(groupAccount.members == 3)
     assert.ok(!groupAccount.openInvites)
+    assert.ok(groupAccount.name == name)
     assert.ok(groupAccount.admin.equals(user1.publicKey))
+  })
+
+  it('Admin modifies group settings for changing name', async () => {
+    const newName = 'sdkjcvhsolikj'
+    await program.rpc.modifyName(newName, {
+      accounts: {
+        group: group[0],
+        admin: user1.publicKey,
+      },
+      signers: [user1],
+    })
+
+    let groupAccount = await program.account.group.fetch(group[0])
+
+    assert.ok(groupAccount.members == 3)
+    assert.ok(!groupAccount.openInvites)
+    assert.ok(groupAccount.name == newName)
+    assert.ok(groupAccount.admin.equals(user1.publicKey))
+
+    name = newName;
   })
 
   it('User now cannot invite new user', async () => {
@@ -150,6 +173,7 @@ describe('groupchats', () => {
       })
       assert.ok(false)
     } catch (err) {
+      console.log(err)
       const errMsg = 'User cannot perform this action'
       assert.equal(err.toString(), errMsg)
     }
@@ -158,12 +182,11 @@ describe('groupchats', () => {
     assert.ok(groupAccount.members == 3)
   })
 
-  it('User cannot modify group settings', async () => {
+  it('User cannot modify group settings for open invites', async () => {
     try {
-      await program.rpc.modify(true, {
+      await program.rpc.modifyOpenIvites(true, {
         accounts: {
           group: group[0],
-          successor: inv2[0],
           admin: user2.publicKey,
         },
         signers: [user2],
@@ -176,6 +199,29 @@ describe('groupchats', () => {
 
     let groupAccount = await program.account.group.fetch(group[0])
     assert.ok(!groupAccount.openInvites)
+    assert.ok(groupAccount.name == name)
+    assert.ok(groupAccount.admin.equals(user1.publicKey))
+  })
+
+  it('User cannot modify group settings for changing name', async () => {
+    const newName = 'kjlnklfvokofjg'
+    try {
+      await program.rpc.modifyName(newName, {
+        accounts: {
+          group: group[0],
+          admin: user2.publicKey,
+        },
+        signers: [user2],
+      })
+      assert.ok(false)
+    } catch (err) {
+      const errMsg = 'User cannot perform this action'
+      assert.equal(err.toString(), errMsg)
+    }
+
+    let groupAccount = await program.account.group.fetch(group[0])
+    assert.ok(!groupAccount.openInvites)
+    assert.ok(groupAccount.name == name)
     assert.ok(groupAccount.admin.equals(user1.publicKey))
   })
 
@@ -322,7 +368,7 @@ describe('groupchats', () => {
   })
 
   it('New Admin modifies group settings, changing admin', async () => {
-    await program.rpc.modify(true, {
+    await program.rpc.modifySuccessor({
       accounts: {
         group: group[0],
         successor: inv3[0],
@@ -334,7 +380,6 @@ describe('groupchats', () => {
     let groupAccount = await program.account.group.fetch(group[0])
 
     assert.ok(groupAccount.members == 2)
-    assert.ok(groupAccount.openInvites)
     assert.ok(groupAccount.admin.equals(user3.publicKey))
   })
 

@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("BKYHC1UxAAvaeZagebJdQYumzVYuDfNhd6Apm3bhb6TA");
+declare_id!("ELofh652AbPVeQaN1n3aYM3B1LizXJLtdMP3asnmF2bX");
 
 const GROUP_PDA_SEED: &[u8] = b"groupchat";
 const INVITE_PDA_SEED: &[u8] = b"invite";
@@ -9,13 +9,14 @@ const INVITE_PDA_SEED: &[u8] = b"invite";
 pub mod groupchats {
     use super::*;
 
-    pub fn create(ctx: Context<Create>, _group_hash: String, group_id: String, open_invites: bool) -> ProgramResult {
+    pub fn create(ctx: Context<Create>, _group_hash: String, group_id: String, open_invites: bool, name: String) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let invitation = &mut ctx.accounts.invitation;
         group.creator = ctx.accounts.payer.key();
         group.admin = ctx.accounts.signer.key();
         group.open_invites = open_invites;
         group.members = 1;
+        group.name = name;
         invitation.sender = ctx.accounts.payer.key();
         invitation.group_key = group.key();
         invitation.recipient = ctx.accounts.signer.key();
@@ -34,11 +35,22 @@ pub mod groupchats {
         Ok(())
     }
 
-    pub fn modify(ctx: Context<Modify>, open_invites: bool) -> ProgramResult {
+    pub fn modify_successor(ctx: Context<ModifySuccessor>) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let successor = &mut ctx.accounts.successor;
         group.admin = successor.recipient;
+        Ok(())
+    }
+
+    pub fn modify_open_ivites(ctx: Context<ModifyParameter>, open_invites: bool) -> ProgramResult {
+        let group = &mut ctx.accounts.group;
         group.open_invites = open_invites;
+        Ok(())
+    }
+
+    pub fn modify_name(ctx: Context<ModifyParameter>, name: String) -> ProgramResult {
+        let group = &mut ctx.accounts.group;
+        group.name = name;
         Ok(())
     }
 
@@ -66,6 +78,7 @@ pub struct Create<'info> {
     #[account(
         init,
         payer = payer,
+        space = 8+32+32+1+1+4+64,
         seeds = [&group_hash.as_bytes()[..32], GROUP_PDA_SEED],
         bump
     )]
@@ -114,17 +127,26 @@ pub struct Invite<'info> {
 }
 
 #[derive(Accounts)]
-pub struct Modify<'info> {
+pub struct ModifySuccessor<'info> {
     #[account(
         mut,
         has_one = admin @ ErrorCode::WrongPrivileges
     )]
     pub group: Account<'info, Group>,
     #[account(
-        mut,
         constraint = successor.group_key == group.key() @ ErrorCode::InvitationMismatch
     )]
     pub successor: Account<'info, Invitation>,
+    pub admin: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ModifyParameter<'info> {
+    #[account(
+        mut,
+        has_one = admin @ ErrorCode::WrongPrivileges
+    )]
+    pub group: Account<'info, Group>,
     pub admin: Signer<'info>,
 }
 
@@ -199,12 +221,12 @@ pub struct Close<'info> {
 }
 
 #[account]
-#[derive(Default)]
 pub struct Group {
     pub creator: Pubkey,
     pub admin: Pubkey,
     pub open_invites: bool,
     pub members: u8,
+    pub name: String,
 }
 
 #[account]
