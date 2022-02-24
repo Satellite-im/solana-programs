@@ -4,6 +4,13 @@ declare_id!("ELofh652AbPVeQaN1n3aYM3B1LizXJLtdMP3asnmF2bX");
 
 const GROUP_PDA_SEED: &[u8] = b"groupchat";
 const INVITE_PDA_SEED: &[u8] = b"invite";
+const DISCRIMINATOR_LENGTH: usize = 8;
+const PUBKEY_LENGTH: usize = 32; 
+const BOOL_LENGTH: usize = 1; 
+const STRING_LENGTH_PREFIX: usize = 4;
+const STRING_LENGTH_NAME: usize = 64;
+const STRING_LENGTH_GROUP_ID: usize = 64;
+const U8_LENGTH: usize = 1;
 
 #[program]
 pub mod groupchats {
@@ -16,11 +23,17 @@ pub mod groupchats {
         group.admin = ctx.accounts.signer.key();
         group.open_invites = open_invites;
         group.members = 1;
+
+        length_check(&name, 3, 64, true)?;
         group.name = name;
+        
         invitation.sender = ctx.accounts.payer.key();
         invitation.group_key = group.key();
         invitation.recipient = ctx.accounts.signer.key();
+        
+        length_check(&group_id, 3, 64, true)?;
         invitation.group_id = group_id;
+        
         Ok(())
     }
 
@@ -31,7 +44,10 @@ pub mod groupchats {
         new_invitation.sender = ctx.accounts.payer.key();
         new_invitation.group_key = group.key();
         new_invitation.recipient = recipient;
+
+        length_check(&group_id, 3, 64, true)?;
         new_invitation.group_id = group_id;
+        
         Ok(())
     }
 
@@ -50,7 +66,10 @@ pub mod groupchats {
 
     pub fn modify_name(ctx: Context<ModifyParameter>, name: String) -> ProgramResult {
         let group = &mut ctx.accounts.group;
+
+        length_check(&name, 3, 64, true)?;
         group.name = name;
+
         Ok(())
     }
 
@@ -78,7 +97,7 @@ pub struct Create<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8+32+32+1+1+4+64,
+        space = Group::LEN,
         seeds = [&group_hash.as_bytes()[..32], GROUP_PDA_SEED],
         bump
     )]
@@ -86,7 +105,7 @@ pub struct Create<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8+32+32+32+4+64,
+        space = Invitation::LEN,
         seeds = [&signer.key.to_bytes()[..32], &group.key().to_bytes()[..32], INVITE_PDA_SEED],
         bump
     )]
@@ -104,7 +123,7 @@ pub struct Invite<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8+32+32+32+4+64,
+        space = Invitation::LEN,
         seeds = [&recipient.to_bytes()[..32], &group.key().to_bytes()[..32], INVITE_PDA_SEED],
         bump
     )]
@@ -229,12 +248,29 @@ pub struct Group {
     pub name: String,
 }
 
+impl Group {
+    const LEN: usize = DISCRIMINATOR_LENGTH
+    + PUBKEY_LENGTH
+    + PUBKEY_LENGTH
+    + BOOL_LENGTH
+    + U8_LENGTH
+    + STRING_LENGTH_PREFIX + STRING_LENGTH_NAME;
+}
+
 #[account]
 pub struct Invitation {
     pub sender: Pubkey,
     pub group_key: Pubkey,
     pub recipient: Pubkey,
     pub group_id: String,
+}
+
+impl Invitation {
+    const LEN: usize = DISCRIMINATOR_LENGTH
+    + PUBKEY_LENGTH
+    + PUBKEY_LENGTH
+    + PUBKEY_LENGTH
+    + STRING_LENGTH_PREFIX + STRING_LENGTH_GROUP_ID;
 }
 
 #[error]
@@ -247,4 +283,27 @@ pub enum ErrorCode {
     PayerMismatch,
     #[msg("Group not empty")]
     NotEmpty,
+    #[msg("The field is too short or too long")]
+    IncorrectField,
+    #[msg("Parameters order mismatch")]
+    InputError,
+}
+
+fn length_check(field: &String, min_accepted_length: usize, max_accepted_length: usize, is_mandatory: bool) -> ProgramResult {
+
+    if is_mandatory && field.chars().count() == 0 {
+        return Err(ErrorCode::IncorrectField.into())
+    }
+
+    if min_accepted_length > max_accepted_length {
+        return Err(ErrorCode::InputError.into())
+    } 
+    
+    if (field.chars().count() >= min_accepted_length && field.chars().count() <= max_accepted_length) || (field.chars().count() == 0) {
+        Ok(())
+    }
+    else {
+        Err(ErrorCode::IncorrectField.into())
+    }  
+    
 }

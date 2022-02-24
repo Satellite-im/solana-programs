@@ -51,6 +51,122 @@ console.log(program.programId.toString())
     program.programId,
   )
 
+  it('Creates a new group with too short name', async () => {
+    // Airdropping tokens to a payer.
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
+      'confirmed',
+    )
+    let failed = false
+    const newName = "sd"
+    try {
+      await program.rpc.create(groupHash, groupId, true, newName, {
+        accounts: {
+          group: group[0],
+          invitation: inv1[0],
+          signer: user1.publicKey,
+          payer: user1.publicKey,
+          systemProgram: SystemProgram.programId,
+        },
+        signers: [user1],
+      })
+    } catch(err) {
+      const errMsg = 'The field is too short or too long'
+      assert.equal(err.toString(), errMsg)
+      failed = true
+    }
+
+    assert.ok(failed == true)
+    
+  })
+
+  it('Creates a new group with too long name', async () => {
+    // Airdropping tokens to a payer.
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
+      'confirmed',
+    )
+    let failed = false
+    const newName = "sddgijoihrgeuirg".repeat(10)
+    try {
+      await program.rpc.create(groupHash, groupId, true, newName, {
+        accounts: {
+          group: group[0],
+          invitation: inv1[0],
+          signer: user1.publicKey,
+          payer: user1.publicKey,
+          systemProgram: SystemProgram.programId,
+        },
+        signers: [user1],
+      })
+    } catch(err) {
+      const errMsg = 'The field is too short or too long'
+      assert.equal(err.toString(), errMsg)
+      failed = true
+    }
+
+    assert.ok(failed == true)
+    
+  })
+
+  it('Creates a new group with too short groupid', async () => {
+    // Airdropping tokens to a payer.
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
+      'confirmed',
+    )
+    let failed = false
+    const newGroupId = "sd"
+    try {
+      await program.rpc.create(groupHash, newGroupId, true, name, {
+        accounts: {
+          group: group[0],
+          invitation: inv1[0],
+          signer: user1.publicKey,
+          payer: user1.publicKey,
+          systemProgram: SystemProgram.programId,
+        },
+        signers: [user1],
+      })
+    } catch(err) {
+      const errMsg = 'The field is too short or too long'
+      assert.equal(err.toString(), errMsg)
+      failed = true
+    }
+
+    assert.ok(failed == true)
+    
+  })
+
+  it('Creates a new group with too long name', async () => {
+    // Airdropping tokens to a payer.
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
+      'confirmed',
+    )
+    let failed = false
+    const newGroupId = "sddgijoihrgeuirg".repeat(10)
+    try {
+      await program.rpc.create(groupHash, newGroupId, true, name, {
+        accounts: {
+          group: group[0],
+          invitation: inv1[0],
+          signer: user1.publicKey,
+          payer: user1.publicKey,
+          systemProgram: SystemProgram.programId,
+        },
+        signers: [user1],
+      })
+    } catch(err) {
+      const errMsg = 'The field is too short or too long'
+      assert.equal(err.toString(), errMsg)
+      failed = true
+    }
+
+    assert.ok(failed == true)
+    
+  })
+
   it('Creates a new group', async () => {
     // Airdropping tokens to a payer.
     await provider.connection.confirmTransaction(
@@ -158,6 +274,54 @@ console.log(program.programId.toString())
     name = newName;
   })
 
+  it('Admin modifies group settings for changing name with too short field', async () => {
+    const newName = 'sd'
+    try {
+      await program.rpc.modifyName(newName, {
+        accounts: {
+          group: group[0],
+          admin: user1.publicKey,
+        },
+        signers: [user1],
+      })
+    } catch(err) {
+      const errMsg = 'The field is too short or too long'
+      assert.equal(err.toString(), errMsg)
+    }
+
+    let groupAccount = await program.account.group.fetch(group[0])
+
+    assert.ok(groupAccount.members == 3)
+    assert.ok(!groupAccount.openInvites)
+    assert.ok(groupAccount.name == name)
+    assert.ok(groupAccount.admin.equals(user1.publicKey))
+
+  })
+
+  it('Admin modifies group settings for changing name with too long field', async () => {
+    const newName = 'sddsoksopivjoifdvpos'.repeat(10)
+    try {
+      await program.rpc.modifyName(newName, {
+        accounts: {
+          group: group[0],
+          admin: user1.publicKey,
+        },
+        signers: [user1],
+      })
+    } catch(err) {
+      const errMsg = 'The field is too short or too long'
+      assert.equal(err.toString(), errMsg)
+    }
+
+    let groupAccount = await program.account.group.fetch(group[0])
+
+    assert.ok(groupAccount.members == 3)
+    assert.ok(!groupAccount.openInvites)
+    assert.ok(groupAccount.name == name)
+    assert.ok(groupAccount.admin.equals(user1.publicKey))
+    
+  })
+
   it('User now cannot invite new user', async () => {
     try {
       await program.rpc.invite(groupId, user4.publicKey, {
@@ -173,7 +337,6 @@ console.log(program.programId.toString())
       })
       assert.ok(false)
     } catch (err) {
-      console.log(err)
       const errMsg = 'User cannot perform this action'
       assert.equal(err.toString(), errMsg)
     }
@@ -376,6 +539,27 @@ console.log(program.programId.toString())
       },
       signers: [user2],
     })
+
+    let groupAccount = await program.account.group.fetch(group[0])
+
+    assert.ok(groupAccount.members == 2)
+    assert.ok(groupAccount.admin.equals(user3.publicKey))
+  })
+
+  it('User modifies group settings, changing admin', async () => {
+    try {
+      await program.rpc.modifySuccessor({
+        accounts: {
+          group: group[0],
+          successor: inv3[0],
+          admin: user1.publicKey,
+        },
+        signers: [user1],
+      })
+    } catch(err) {
+      const errMsg = 'User cannot perform this action'
+      assert.equal(err.toString(), errMsg)
+    }
 
     let groupAccount = await program.account.group.fetch(group[0])
 
