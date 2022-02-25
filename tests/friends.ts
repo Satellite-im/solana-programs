@@ -134,7 +134,7 @@ describe('friends', () => {
             signers: [user2],
             })
         } catch(err) {
-
+            console.log(err)
             const errMsg = "Request already existent"
             assert.equal(errMsg, err.msg)
         }
