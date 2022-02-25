@@ -3,6 +3,11 @@ groupchats = "ELofh652AbPVeQaN1n3aYM3B1LizXJLtdMP3asnmF2bX"
 users = "7JavG7ED3PYGmiGdjqYG13X5vinhNP3XK7YDZj7WZTpP"
 friends = "BSqFrPKYg3R1DVriwKhMuQSeH7NbU6tZMgMgD3nScPRV"
 
+[programs.devnet]
+groupchats = "ELofh652AbPVeQaN1n3aYM3B1LizXJLtdMP3asnmF2bX"
+users = "7JavG7ED3PYGmiGdjqYG13X5vinhNP3XK7YDZj7WZTpP"
+friends = "BSqFrPKYg3R1DVriwKhMuQSeH7NbU6tZMgMgD3nScPRV"
+
 [registry]
 url = "https://anchor.projectserum.com"
 

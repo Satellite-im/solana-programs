@@ -75,8 +75,6 @@ console.log(program.programId.toString())
         signers: [user1],
       })
     } catch(err) {
-      console.log('ERRR',err)
-      console.log(err.toString())
       const errMsg = 'The field is too short or too long'
       assert.equal(err.toString(), errMsg)
       failed = true
