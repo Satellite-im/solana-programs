@@ -2314,55 +2314,5 @@ describe('friends', () => {
         assert.ok(requestAccountsRemoved.length == 0)
        
     })
-
-    it("Count all requests", async () => {
-        const requestAccounts = await program.account.friendRequest.all()
-
-        assert.ok(requestAccounts.length == 2)
-
-    })
-
-    it("Count all requests of user 1", async () => {
-        const requestAccounts = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8,
-                    bytes: user1.publicKey.toBase58(),
-                }
-            }
-        ])
-
-        assert.ok(requestAccounts.length == 1)
-
-    })
-
-    it("Count all requests of user 2", async () => {
-        const requestAccounts = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32+1,
-                    bytes: user2.publicKey.toBase58(),
-                }
-            }
-        ])
-
-        assert.ok(requestAccounts.length == 1)
-
-    })
-
-    it("Count all pending requests", async () => {
-        const requestAccounts = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32,
-                    bytes: microbs58(Buffer.from([1])),
-                }
-            }
-        ])
-
-        assert.ok(requestAccounts.length == 2)
-
-    })
-
     
 })
