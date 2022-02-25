@@ -104,8 +104,8 @@ pub struct Create<'info> {
         bump
     )]
     pub user: Account<'info, User>,
-    #[account(mut)]
     pub signer: Signer<'info>,
+    #[account(mut)]    
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
@@ -118,8 +118,8 @@ pub struct Modify<'info> {
         bump
     )]
     pub user: Account<'info, User>,
-    #[account(mut)]
     pub signer: Signer<'info>,
+    #[account(mut)]
     pub payer: Signer<'info>,
 }
 

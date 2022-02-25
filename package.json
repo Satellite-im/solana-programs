@@ -1,6 +1,7 @@
 {
   "dependencies": {
-    "@project-serum/anchor": "^0.20.1"
+    "@project-serum/anchor": "^0.20.1",
+    "micro-base58": "^0.5.1"
   },
   "devDependencies": {
     "@types/mocha": "^9.0.0",

@@ -11,12 +11,13 @@ const STRING_LENGTH_PREFIX: usize = 4;
 const STRING_LENGTH_NAME: usize = 64;
 const STRING_LENGTH_GROUP_ID: usize = 64;
 const U8_LENGTH: usize = 1;
+const STRING_LENGTH_ENCRYPTION_KEY: usize = 64;
 
 #[program]
 pub mod groupchats {
     use super::*;
 
-    pub fn create(ctx: Context<Create>, _group_hash: String, group_id: String, open_invites: bool, name: String) -> ProgramResult {
+    pub fn create(ctx: Context<Create>, _group_hash: String, group_id: Vec<u8>, open_invites: bool, name: String, encryption_key: String) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let invitation = &mut ctx.accounts.invitation;
         group.creator = ctx.accounts.payer.key();
@@ -31,13 +32,16 @@ pub mod groupchats {
         invitation.group_key = group.key();
         invitation.recipient = ctx.accounts.signer.key();
         
-        length_check(&group_id, 3, 64, true)?;
+        length_check_vec(&group_id, 3, 64, true)?;
         invitation.group_id = group_id;
-        
+
+        length_check(&encryption_key, 64, 64, true)?;
+        invitation.encryption_key = encryption_key;
+
         Ok(())
     }
 
-    pub fn invite(ctx: Context<Invite>, group_id: String, recipient: Pubkey) -> ProgramResult {
+    pub fn invite(ctx: Context<Invite>, group_id: Vec<u8>, recipient: Pubkey, encryption_key: String) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let new_invitation = &mut ctx.accounts.new_invitation;
         group.members += 1;
@@ -45,8 +49,11 @@ pub mod groupchats {
         new_invitation.group_key = group.key();
         new_invitation.recipient = recipient;
 
-        length_check(&group_id, 3, 64, true)?;
+        length_check_vec(&group_id, 3, 64, true)?;
         new_invitation.group_id = group_id;
+
+        length_check(&encryption_key, 64, 64, true)?;
+        new_invitation.encryption_key = encryption_key;
         
         Ok(())
     }
@@ -262,7 +269,8 @@ pub struct Invitation {
     pub sender: Pubkey,
     pub group_key: Pubkey,
     pub recipient: Pubkey,
-    pub group_id: String,
+    pub group_id: Vec<u8>,
+    pub encryption_key: String,
 }
 
 impl Invitation {
@@ -270,7 +278,8 @@ impl Invitation {
     + PUBKEY_LENGTH
     + PUBKEY_LENGTH
     + PUBKEY_LENGTH
-    + STRING_LENGTH_PREFIX + STRING_LENGTH_GROUP_ID;
+    + STRING_LENGTH_PREFIX + STRING_LENGTH_GROUP_ID
+    + STRING_LENGTH_PREFIX + STRING_LENGTH_ENCRYPTION_KEY;
 }
 
 #[error]
@@ -300,6 +309,25 @@ fn length_check(field: &String, min_accepted_length: usize, max_accepted_length:
     } 
     
     if (field.chars().count() >= min_accepted_length && field.chars().count() <= max_accepted_length) || (field.chars().count() == 0) {
+        Ok(())
+    }
+    else {
+        Err(ErrorCode::IncorrectField.into())
+    }  
+    
+}
+
+fn length_check_vec(field: &Vec<u8>, min_accepted_length: usize, max_accepted_length: usize, is_mandatory: bool) -> ProgramResult {
+
+    if is_mandatory && field.len() == 0 {
+        return Err(ErrorCode::IncorrectField.into())
+    }
+
+    if min_accepted_length > max_accepted_length {
+        return Err(ErrorCode::InputError.into())
+    } 
+    
+    if (field.len() >= min_accepted_length && field.len() <= max_accepted_length) || (field.len() == 0) {
         Ok(())
     }
     else {

@@ -3,6 +3,7 @@ import { Program } from '@project-serum/anchor'
 import { Friends } from '../target/types/friends'
 import assert from 'assert'
 import { associatedAddress } from '@project-serum/anchor/dist/cjs/utils/token'
+import microbs58  from 'micro-base58';
 const bs58 = require('bs58')
 const { SystemProgram } = anchor.web3
 
@@ -971,6 +972,7 @@ describe('friends', () => {
         assert.ok(requestAccount.fromEncryptedKey == k)
         assert.ok(requestAccount.toEncryptedKey == "")
         assert.ok(Object.keys(requestAccount.status)[0] == 'pending')
+        console.log(requestAccount.status)
        
     })
 
@@ -1014,7 +1016,7 @@ describe('friends', () => {
             {
                 memcmp: {
                     offset: 8+32,
-                    bytes: bs58.encode(Buffer.from("pending")),
+                    bytes: microbs58(Buffer.from([1])),
                 }
             }
         ])
