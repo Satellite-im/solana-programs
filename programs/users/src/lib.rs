@@ -105,7 +105,7 @@ pub struct Create<'info> {
     )]
     pub user: Account<'info, User>,
     pub signer: Signer<'info>,
-    #[account(mut)]    
+    #[account(mut)]
     pub payer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
