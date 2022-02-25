@@ -120,7 +120,7 @@ describe('friends', () => {
     it('User 2 creates a new request for user 1 (payer user 2) after user 1 creates same request', async () => {
         // Airdropping tokens to a payer.
         await provider.connection.confirmTransaction(
-          await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
+          await provider.connection.requestAirdrop(user2.publicKey, 10000000000),
           'confirmed',
         )
         try {
@@ -134,6 +134,7 @@ describe('friends', () => {
             signers: [user2],
             })
         } catch(err) {
+
             const errMsg = "Request already existent"
             assert.equal(errMsg, err.msg)
         }
