@@ -1,4 +1,4 @@
-/*import * as anchor from '@project-serum/anchor'
+import * as anchor from '@project-serum/anchor'
 import { Program } from '@project-serum/anchor'
 import { Friends } from '../target/types/friends'
 import assert from 'assert'
@@ -108,14 +108,54 @@ describe('friends', () => {
         })
         
         let requestAccount = await program.account.friendRequest.fetch(request[0])
-       
+        const requestAccountsAll = await program.account.friendRequest.all()
+        const requestAccountsPending = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([1])),
+                }
+            }
+        ])
+        const requestAccountsAccepted = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([2])),
+                }
+            }
+        ])
+        const requestAccountsDenied = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([3])),
+                }
+            }
+        ])
+        const requestAccountsRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+
+      
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
         assert.ok(requestAccount.fromEncryptedKey == k)
         assert.ok(requestAccount.toEncryptedKey == "")
         assert.ok(Object.keys(requestAccount.status)[0] == 'pending')
-       
+        assert.ok(requestAccountsAll.length == 1)
+        assert.ok(requestAccountsPending.length == 1)
+        assert.ok(requestAccountsAccepted.length == 0)
+        assert.ok(requestAccountsDenied.length == 0)
+        assert.ok(requestAccountsRemoved.length == 0)
+
     })
+
 
     it('User 2 creates a new request for user 1 (payer user 2) after user 1 creates same request', async () => {
         // Airdropping tokens to a payer.
@@ -1027,4 +1067,4 @@ describe('friends', () => {
     })
 
     
-})*/
+})

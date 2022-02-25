@@ -1,4 +1,4 @@
-/*import * as anchor from '@project-serum/anchor'
+import * as anchor from '@project-serum/anchor'
 import { Program } from '@project-serum/anchor'
 import { Users } from '../target/types/users'
 import assert from 'assert'
@@ -813,4 +813,4 @@ describe('users', () => {
     extra2 = newExtra2
   })
 
-})*/
+})
