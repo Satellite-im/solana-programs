@@ -20,7 +20,6 @@ describe('friends', () => {
     let intPublicKeyUser1 = parseInt(Buffer.from(bs58.decode(user1.publicKey.toBase58())).toString('hex'), 16)
     let intPublicKeyUser2 = parseInt(Buffer.from(bs58.decode(user2.publicKey.toBase58())).toString('hex'), 16)
     if (intPublicKeyUser1 < intPublicKeyUser2) {
-        console.log("1 < 2")
         const tmp = user2;
         user2 = user1;
         user1 = tmp;
@@ -174,7 +173,6 @@ describe('friends', () => {
             signers: [user2],
             })
         } catch(err) {
-            console.log(err)
             const errMsg = "Request already existent"
             assert.equal(errMsg, err.msg)
         }

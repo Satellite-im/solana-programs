@@ -25,7 +25,6 @@ describe('groupchats', () => {
 
   let encryptionKey = 'dhfskjdfhsdjkfhsdjkfhdsjkhdjkfdhfskjdfhsdjkfhsdjkfhdsjkhdjkfdfrt'
 
-console.log(program.programId.toString())
   // Accounts for the tests.
   const group = anchor.utils.publicKey.findProgramAddressSync(
     [groupHash, groupSeed],
