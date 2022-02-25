@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("ELofh652AbPVeQaN1n3aYM3B1LizXJLtdMP3asnmF2bX");
+declare_id!("bJhvwTYCkQceANgeShZ4xaxUqEBPsV8e1NgRnLRymxs");
 
 const GROUP_PDA_SEED: &[u8] = b"groupchat";
 const INVITE_PDA_SEED: &[u8] = b"invite";
