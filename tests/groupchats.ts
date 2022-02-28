@@ -51,7 +51,7 @@ describe('groupchats', () => {
     program.programId,
   )
 
-  it('Creates a new group with too short name', async () => {
+  it('Cannot create a new group with too short name', async () => {
     // Airdropping tokens to a payer.
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
@@ -80,7 +80,7 @@ describe('groupchats', () => {
     
   })
 
-  it('Creates a new group with too long name', async () => {
+  it('Cannot create a new group with too long name', async () => {
     // Airdropping tokens to a payer.
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
@@ -110,7 +110,7 @@ describe('groupchats', () => {
   })
 
 
-  it('Creates a new group with wrong encryption key (63 characters)', async () => {
+  it('Cannot create a new group with wrong encryption key (63 characters)', async () => {
     // Airdropping tokens to a payer.
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
@@ -139,7 +139,7 @@ describe('groupchats', () => {
     
   })
 
-  it('Creates a new group with wrong encryption key (65 characters)', async () => {
+  it('Cannot create a new group with wrong encryption key (65 characters)', async () => {
     // Airdropping tokens to a payer.
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
@@ -276,7 +276,7 @@ describe('groupchats', () => {
     name = newName;
   })
 
-  it('Admin modifies group settings for changing name with too short field', async () => {
+  it('Admin cannot modify group settings for changing name with too short field', async () => {
     const newName = 'sd'
     try {
       await program.rpc.modifyName(newName, {
@@ -300,7 +300,7 @@ describe('groupchats', () => {
 
   })
 
-  it('Admin modifies group settings for changing name with too long field', async () => {
+  it('Admin cannot modify group settings for changing name with too long field', async () => {
     const newName = 'sddsoksopivjoifdvpos'.repeat(10)
     try {
       await program.rpc.modifyName(newName, {

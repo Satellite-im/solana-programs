@@ -63,7 +63,7 @@ describe('friends', () => {
     
     const k = 'dhfskjdfhsdjkfhsdjkfhdsjkhdjkfds'.repeat(4)
 
-    it('User 1 creates a new request for user 2 (payer user 1) with different order of accounts', async () => {
+    it('User 1 cannot create a new request for user 2 (payer user 1) with different order of accounts', async () => {
         // Airdropping tokens to a payer.
         await provider.connection.confirmTransaction(
           await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
@@ -156,7 +156,7 @@ describe('friends', () => {
     })
 
 
-    it('User 2 creates a new request for user 1 (payer user 2) after user 1 creates same request', async () => {
+    it('User 2 cannot create a new request for user 1 (payer user 2) after user 1 creates the request for user 2', async () => {
         // Airdropping tokens to a payer.
         await provider.connection.confirmTransaction(
           await provider.connection.requestAirdrop(user2.publicKey, 10000000000),
@@ -225,77 +225,7 @@ describe('friends', () => {
 
     })
 
-    it('Try to create same request using user 2 account as payer', async () => {
-        // Airdropping tokens to a payer.
-        await provider.connection.confirmTransaction(
-          await provider.connection.requestAirdrop(user2.publicKey, 10000000000),
-          'confirmed',
-        )
-        try{
-            await program.rpc.makeRequest(user1.publicKey, user2.publicKey, k, {
-            accounts: {
-                request: request[0],
-                user: user2.publicKey,
-                payer: user2.publicKey,
-                systemProgram: SystemProgram.programId,
-            },
-            signers: [user2],
-            })
-        } catch(err) {
-            const errMsg = "Request already existent"
-            assert.equal(errMsg, err.msg)
-        }
-        
-        let requestAccount = await program.account.friendRequest.fetch(request[0])
-        const requestAccountsAll = await program.account.friendRequest.all()
-        const requestAccountsPending = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32,
-                    bytes: microbs58(Buffer.from([1])),
-                }
-            }
-        ])
-        const requestAccountsAccepted = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32,
-                    bytes: microbs58(Buffer.from([2])),
-                }
-            }
-        ])
-        const requestAccountsDenied = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32,
-                    bytes: microbs58(Buffer.from([3])),
-                }
-            }
-        ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32,
-                    bytes: microbs58(Buffer.from([4])),
-                }
-            }
-        ])
-       
-        assert.ok(requestAccount.from.equals(user1.publicKey))
-        assert.ok(requestAccount.to.equals(user2.publicKey))
-        assert.ok(requestAccount.fromEncryptedKey == k)
-        assert.ok(requestAccount.toEncryptedKey == "")
-        assert.ok(Object.keys(requestAccount.status)[0] == 'pending')
-        assert.ok(requestAccountsAll.length == 1)
-        assert.ok(requestAccountsPending.length == 1)
-        assert.ok(requestAccountsAccepted.length == 0)
-        assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
-       
-    })
-    
-
-    it('User try to create a new request for user1 and user 2', async () => {
+    it('Extern user cannot create a new request for user1 and user 2', async () => {
         // Airdropping tokens to a payer.
         await provider.connection.confirmTransaction(
           await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
@@ -361,7 +291,7 @@ describe('friends', () => {
        
     })
 
-    it('Creates a new request from user 5 to user 6 (payer other User) and inverted order of users in terms of numeric value', async () => {
+    it('User 5 cannot create a request for user 6 if public key (numeric value) of user 5 is less then public key of user 6', async () => {
     let user5 = anchor.web3.Keypair.generate()
     let user6 = anchor.web3.Keypair.generate()
 
@@ -512,7 +442,7 @@ describe('friends', () => {
        
     })
 
-    it('The creator of the request try to deny his own request', async () => {
+    it('The creator of the request cannot deny his own request', async () => {
         try {
             await program.rpc.denyRequest({
             accounts: {
@@ -573,7 +503,7 @@ describe('friends', () => {
         
     })
 
-    it('Impostor try to deny a request', async () => {
+    it('Impostor cannot deny any request', async () => {
         try {
             await program.rpc.denyRequest({
             accounts: {
@@ -691,7 +621,7 @@ describe('friends', () => {
         
     })
 
-    it('User 2 deny again request from user 1', async () => {
+    it('User 2 cannot deny a request already denied from user 1', async () => {
         try {
             await program.rpc.denyRequest({
             accounts: {
@@ -819,7 +749,7 @@ describe('friends', () => {
        
     })
 
-    it('The creator of the request try to accept his own request', async () => {
+    it('The creator of the request cannot accept his own request', async () => {
         try {
             await program.rpc.acceptRequest(k, {
             accounts: {
@@ -880,7 +810,7 @@ describe('friends', () => {
         
     })
 
-    it('Impostor try to accept a request', async () => {
+    it('Impostor cannot accept any request', async () => {
         try {
             await program.rpc.acceptRequest(k, {
             accounts: {
@@ -999,7 +929,7 @@ describe('friends', () => {
         
     })
 
-    it('User 2 try to accept again a request', async () => {
+    it('User 2 cannot accept a request already accepted from user 1', async () => {
         try{
             await program.rpc.acceptRequest(k, {
             accounts: {
@@ -1061,7 +991,7 @@ describe('friends', () => {
         
     })
 
-    it('Creates a new request from user 1 to user 2 when it is already accepted', async () => {
+    it('user 1 cannot create a new request for user 2 when it is already accepted', async () => {
         // Airdropping tokens to a payer.
         await provider.connection.confirmTransaction(
           await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
@@ -1130,7 +1060,7 @@ describe('friends', () => {
        
     })
 
-    it('Try to remove accepted request', async () => {
+    it('User 1 cannot remove a request for user 2 when they are friends', async () => {
         try{
             await program.rpc.removeRequest({
             accounts: {
@@ -1193,7 +1123,7 @@ describe('friends', () => {
         
     })
 
-    it('Impostor try to remove accepted request', async () => {
+    it('Impostor cannot remove any request', async () => {
         try{
             await program.rpc.removeRequest({
             accounts: {
@@ -1256,7 +1186,7 @@ describe('friends', () => {
         
     })
 
-    it('Impostor try to remove friend in a request', async () => {
+    it('Impostor cannot remove friends from any request', async () => {
         try{
             await program.rpc.removeFriend({
             accounts: {
@@ -1318,19 +1248,16 @@ describe('friends', () => {
         
     })
 
-    it('User 1 try to remove friend from accepted request', async () => {
-        try{
-            await program.rpc.removeFriend({
-            accounts: {
-                request: request[0],
-                user: user1.publicKey,
-            },
-            signers: [user1],
-            })
-        } catch(err) {
-            const errMsg = "Users are already friends"
-            assert.equal(errMsg, err.msg)
-        }
+    it('User 1 removes friend from accepted request', async () => {
+        
+        await program.rpc.removeFriend({
+        accounts: {
+            request: request[0],
+            user: user1.publicKey,
+        },
+        signers: [user1],
+        })
+        
         let requestAccount = await program.account.friendRequest.fetch(request[0])
         const requestAccountsAll = await program.account.friendRequest.all()
         const requestAccountsPending = await program.account.friendRequest.all([
@@ -1379,7 +1306,7 @@ describe('friends', () => {
         
     })
 
-    it('User 1 try to remove friend from removed request', async () => {
+    it('User 1 cannot remove friend from removed request because they are not friend anymore', async () => {
         try{
             await program.rpc.removeFriend({
             accounts: {
@@ -1505,68 +1432,6 @@ describe('friends', () => {
        
     })
 
-    it('User 2 try to deny a request that is not pending', async () => {
-        try {
-            await program.rpc.denyRequest({
-            accounts: {
-                request: request[0],
-                user: otherUser.publicKey,
-            },
-            signers: [otherUser],
-            })
-        } catch(err) {
-            const errMsg = "User can't perform this action"
-            assert.equal(errMsg, err.msg)
-        }
-        
-        let requestAccount = await program.account.friendRequest.fetch(request[0])
-        const requestAccountsAll = await program.account.friendRequest.all()
-        const requestAccountsPending = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32,
-                    bytes: microbs58(Buffer.from([1])),
-                }
-            }
-        ])
-        const requestAccountsAccepted = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32,
-                    bytes: microbs58(Buffer.from([2])),
-                }
-            }
-        ])
-        const requestAccountsDenied = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32,
-                    bytes: microbs58(Buffer.from([3])),
-                }
-            }
-        ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32,
-                    bytes: microbs58(Buffer.from([4])),
-                }
-            }
-        ])
-       
-        assert.ok(requestAccount.from.equals(user1.publicKey))
-        assert.ok(requestAccount.to.equals(user2.publicKey))
-        assert.ok(requestAccount.fromEncryptedKey == k)
-        assert.ok(requestAccount.toEncryptedKey == "")
-        assert.ok(Object.keys(requestAccount.status)[0] == 'pending')
-        assert.ok(requestAccountsAll.length == 2)
-        assert.ok(requestAccountsPending.length == 2)
-        assert.ok(requestAccountsAccepted.length == 0)
-        assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
-        
-    })
-
     it('User 2 accepts Request from user 1', async () => {
         await program.rpc.acceptRequest(k, {
         accounts: {
@@ -1624,7 +1489,7 @@ describe('friends', () => {
         
     })
 
-    it('User 2 try to deny a request that is not pending', async () => {
+    it('User 2 cannot deny a request that is accepted', async () => {
         try {
             await program.rpc.denyRequest({
             accounts: {
@@ -1686,7 +1551,7 @@ describe('friends', () => {
     })
 
 
-    it('User 1 (payer) try to remove accepted request', async () => {
+    it('User 1 (payer) cannot remove accepted request', async () => {
         try{
             await program.rpc.removeRequest({
             accounts: {
@@ -1749,7 +1614,7 @@ describe('friends', () => {
         
     })
 
-    it('User 2 try to remove friend from accepted request', async () => {
+    it('User 2 cannot remove friend from accepted request', async () => {
         try{
             await program.rpc.removeFriend({
             accounts: {
@@ -1810,7 +1675,7 @@ describe('friends', () => {
         
     })
 
-    it('User 1 (payer) try to remove request with different payer', async () => {
+    it('User 1 (payer) cannot remove request with different payer', async () => {
         try{
             await program.rpc.removeRequest({
             accounts: {
@@ -1937,7 +1802,7 @@ describe('friends', () => {
        
     })
 
-    it('User 1 try to remove request (payer user 1)', async () => {
+    it('User 1 removes request (payer user 1)', async () => {
         await program.rpc.removeRequest({
         accounts: {
             request: request[0],
@@ -2060,7 +1925,7 @@ describe('friends', () => {
        
     })
 
-    it('User 1 try to remove request again (payer user 1)', async () => {
+    it('User 1 removes request again (payer user 1)', async () => {
         await program.rpc.removeRequest({
         accounts: {
             request: request[0],
@@ -2119,7 +1984,7 @@ describe('friends', () => {
 
     })
 
-    it('User 3 try to remove request again (payer other user)', async () => {
+    it('User 3 removes request again (payer other user)', async () => {
         await program.rpc.removeRequest({
         accounts: {
             request: newRequest[0],
