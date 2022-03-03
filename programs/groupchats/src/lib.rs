@@ -4,26 +4,42 @@ declare_id!("bJhvwTYCkQceANgeShZ4xaxUqEBPsV8e1NgRnLRymxs");
 
 const GROUP_PDA_SEED: &[u8] = b"groupchat";
 const INVITE_PDA_SEED: &[u8] = b"invite";
+const DISCRIMINATOR_LENGTH: usize = 8;
+const PUBKEY_LENGTH: usize = 32; 
+const BOOL_LENGTH: usize = 1; 
+const STRING_LENGTH_PREFIX: usize = 4;
+const STRING_LENGTH_NAME: usize = 64;
+const ARRAY_LENGTH_GROUP_ID: usize = 64;
+const U8_LENGTH: usize = 1;
+const STRING_LENGTH_ENCRYPTION_KEY: usize = 64;
 
 #[program]
 pub mod groupchats {
     use super::*;
 
-    pub fn create(ctx: Context<Create>, _group_hash: [u8; 32], group_id: String, open_invites: bool) -> ProgramResult {
+    pub fn create(ctx: Context<Create>, _group_hash: [u8; 32], group_id: [u8; 64], open_invites: bool, name: String, encryption_key: String) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let invitation = &mut ctx.accounts.invitation;
         group.creator = ctx.accounts.payer.key();
         group.admin = ctx.accounts.signer.key();
         group.open_invites = open_invites;
         group.members = 1;
+
+        length_check(&name, 3, 64, true)?;
+        group.name = name;
+        
         invitation.sender = ctx.accounts.payer.key();
         invitation.group_key = group.key();
         invitation.recipient = ctx.accounts.signer.key();
         invitation.group_id = group_id;
+
+        length_check(&encryption_key, 64, 64, true)?;
+        invitation.encryption_key = encryption_key;
+
         Ok(())
     }
 
-    pub fn invite(ctx: Context<Invite>, group_id: String, recipient: Pubkey) -> ProgramResult {
+    pub fn invite(ctx: Context<Invite>, group_id: [u8; 64], recipient: Pubkey, encryption_key: String) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let new_invitation = &mut ctx.accounts.new_invitation;
         group.members += 1;
@@ -31,14 +47,32 @@ pub mod groupchats {
         new_invitation.group_key = group.key();
         new_invitation.recipient = recipient;
         new_invitation.group_id = group_id;
+
+        length_check(&encryption_key, 64, 64, true)?;
+        new_invitation.encryption_key = encryption_key;
+        
         Ok(())
     }
 
-    pub fn modify(ctx: Context<Modify>, open_invites: bool) -> ProgramResult {
+    pub fn modify_successor(ctx: Context<ModifySuccessor>) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let successor = &mut ctx.accounts.successor;
         group.admin = successor.recipient;
+        Ok(())
+    }
+
+    pub fn modify_open_ivites(ctx: Context<ModifyParameter>, open_invites: bool) -> ProgramResult {
+        let group = &mut ctx.accounts.group;
         group.open_invites = open_invites;
+        Ok(())
+    }
+
+    pub fn modify_name(ctx: Context<ModifyParameter>, name: String) -> ProgramResult {
+        let group = &mut ctx.accounts.group;
+
+        length_check(&name, 3, 64, true)?;
+        group.name = name;
+
         Ok(())
     }
 
@@ -66,6 +100,7 @@ pub struct Create<'info> {
     #[account(
         init,
         payer = payer,
+        space = Group::LEN,
         seeds = [&group_hash, GROUP_PDA_SEED],
         bump
     )]
@@ -73,7 +108,7 @@ pub struct Create<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8+32+32+32+4+64,
+        space = Invitation::LEN,
         seeds = [&signer.key.to_bytes()[..32], &group.key().to_bytes()[..32], INVITE_PDA_SEED],
         bump
     )]
@@ -85,12 +120,12 @@ pub struct Create<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(thread_id: String, recipient: Pubkey)]
+#[instruction(group_id: [u8; 64], recipient: Pubkey)]
 pub struct Invite<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8+32+32+32+4+64,
+        space = Invitation::LEN,
         seeds = [&recipient.to_bytes()[..32], &group.key().to_bytes()[..32], INVITE_PDA_SEED],
         bump
     )]
@@ -112,7 +147,7 @@ pub struct Invite<'info> {
 }
 
 #[derive(Accounts)]
-pub struct Modify<'info> {
+pub struct ModifySuccessor<'info> {
     #[account(
         mut,
         has_one = admin @ ErrorCode::WrongPrivileges
@@ -122,6 +157,16 @@ pub struct Modify<'info> {
         constraint = successor.group_key == group.key() @ ErrorCode::InvitationMismatch
     )]
     pub successor: Account<'info, Invitation>,
+    pub admin: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ModifyParameter<'info> {
+    #[account(
+        mut,
+        has_one = admin @ ErrorCode::WrongPrivileges
+    )]
+    pub group: Account<'info, Group>,
     pub admin: Signer<'info>,
 }
 
@@ -195,12 +240,21 @@ pub struct Close<'info> {
 }
 
 #[account]
-#[derive(Default)]
 pub struct Group {
     pub creator: Pubkey,
     pub admin: Pubkey,
     pub open_invites: bool,
     pub members: u8,
+    pub name: String,
+}
+
+impl Group {
+    const LEN: usize = DISCRIMINATOR_LENGTH
+    + PUBKEY_LENGTH
+    + PUBKEY_LENGTH
+    + BOOL_LENGTH
+    + U8_LENGTH
+    + STRING_LENGTH_PREFIX + STRING_LENGTH_NAME;
 }
 
 #[account]
@@ -208,7 +262,17 @@ pub struct Invitation {
     pub sender: Pubkey,
     pub group_key: Pubkey,
     pub recipient: Pubkey,
-    pub group_id: String,
+    pub group_id: [u8; 64],
+    pub encryption_key: String,
+}
+
+impl Invitation {
+    const LEN: usize = DISCRIMINATOR_LENGTH
+    + PUBKEY_LENGTH
+    + PUBKEY_LENGTH
+    + PUBKEY_LENGTH
+    + ARRAY_LENGTH_GROUP_ID
+    + STRING_LENGTH_PREFIX + STRING_LENGTH_ENCRYPTION_KEY;
 }
 
 #[error]
@@ -221,4 +285,27 @@ pub enum ErrorCode {
     PayerMismatch,
     #[msg("Group not empty")]
     NotEmpty,
+    #[msg("The field is too short or too long")]
+    IncorrectField,
+    #[msg("Parameters order mismatch")]
+    InputError,
+}
+
+fn length_check(field: &String, min_accepted_length: usize, max_accepted_length: usize, is_mandatory: bool) -> ProgramResult {
+
+    if is_mandatory && field.chars().count() == 0 {
+        return Err(ErrorCode::IncorrectField.into())
+    }
+
+    if min_accepted_length > max_accepted_length {
+        return Err(ErrorCode::InputError.into())
+    } 
+    
+    if (field.chars().count() >= min_accepted_length && field.chars().count() <= max_accepted_length) || (field.chars().count() == 0) {
+        Ok(())
+    }
+    else {
+        Err(ErrorCode::IncorrectField.into())
+    }  
+    
 }
