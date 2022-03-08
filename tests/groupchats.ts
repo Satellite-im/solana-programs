@@ -16,14 +16,15 @@ describe('groupchats', () => {
   const groupSeed = Buffer.from(anchor.utils.bytes.utf8.encode('groupchat'))
   const inviteSeed = Buffer.from(anchor.utils.bytes.utf8.encode('invite'))
 
-  let groupIdString =
+  let groupId =
     'dhfskjdfhsdjkfhsdjkfhdsjkhdjkfdhfskjdfhsdjkfhsdjkfhdsjkhdjkfdfrt'
-  const groupHash = Buffer.from(anchor.utils.sha256.hash(groupIdString), 'hex')
-  let groupId = Buffer.from(groupIdString)
+  const groupHash = Buffer.from(anchor.utils.sha256.hash(groupId), 'hex')
 
   let name = 'dhfskjdfhsdjkfh'
 
   let encryptionKey = 'dhfskjdfhsdjkfhsdjkfhdsjkhdjkfdhfskjdfhsdjkfhsdjkfhdsjkhdjkfdfrt'
+
+  let dbType = 1
 
   // Accounts for the tests.
   const group = anchor.utils.publicKey.findProgramAddressSync(
@@ -60,7 +61,7 @@ describe('groupchats', () => {
     let failed = false
     const newName = "sd"
     try {
-      await program.rpc.create(groupHash, groupId, true, newName, encryptionKey, {
+      await program.rpc.create(groupHash, groupId, true, newName, encryptionKey, dbType, {
         accounts: {
           group: group[0],
           invitation: inv1[0],
@@ -89,7 +90,7 @@ describe('groupchats', () => {
     let failed = false
     const newName = "sddgijoihrgeuirg".repeat(10)
     try {
-      await program.rpc.create(groupHash, groupId, true, newName, encryptionKey, {
+      await program.rpc.create(groupHash, groupId, true, newName, encryptionKey, dbType, {
         accounts: {
           group: group[0],
           invitation: inv1[0],
@@ -119,7 +120,7 @@ describe('groupchats', () => {
     let newEncryptionKey = 'dhfskjdfhsdjkfhsdjkfhdsjkhdjkfdhfskjdfhsdjkfhsdjkfhdsjkhdjkfdfr'
     let failed = false
     try {
-      await program.rpc.create(groupHash, groupId, true, name, newEncryptionKey, {
+      await program.rpc.create(groupHash, groupId, true, name, newEncryptionKey, dbType, {
         accounts: {
           group: group[0],
           invitation: inv1[0],
@@ -148,7 +149,65 @@ describe('groupchats', () => {
     let newEncryptionKey = 'dhfskjdfhsdjkfhsdjkfhdsjkhdjkfdhfskjdfhsdjkfhsdjkfhdsjkhdjkfdfrtt'
     let failed = false
     try {
-      await program.rpc.create(groupHash, groupId, true, name, newEncryptionKey, {
+      await program.rpc.create(groupHash, groupId, true, name, newEncryptionKey, dbType, {
+        accounts: {
+          group: group[0],
+          invitation: inv1[0],
+          signer: user1.publicKey,
+          payer: user1.publicKey,
+          systemProgram: SystemProgram.programId,
+        },
+        signers: [user1],
+      })
+    } catch(err) {
+      const errMsg = 'The field is too short or too long'
+      assert.equal(err.toString(), errMsg)
+      failed = true
+    }
+
+    assert.ok(failed == true)
+    
+  })
+
+  it('Cannot create a new group with wrong group_id (more then 160 characters)', async () => {
+    // Airdropping tokens to a payer.
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
+      'confirmed',
+    )
+    let newGroupId = 'dhfskjdfhsdjkfhsdjkfhdsjkhdjkfdhfskjdfhsdjkfhsdjkfhdsjkhdjkfdfrtt'.repeat(5)
+    let failed = false
+    try {
+      await program.rpc.create(groupHash, newGroupId, true, name, encryptionKey, dbType, {
+        accounts: {
+          group: group[0],
+          invitation: inv1[0],
+          signer: user1.publicKey,
+          payer: user1.publicKey,
+          systemProgram: SystemProgram.programId,
+        },
+        signers: [user1],
+      })
+    } catch(err) {
+      const errMsg = 'The field is too short or too long'
+      assert.equal(err.toString(), errMsg)
+      failed = true
+    }
+
+    assert.ok(failed == true)
+    
+  })
+
+  it('Cannot create a new group with empty group_id', async () => {
+    // Airdropping tokens to a payer.
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
+      'confirmed',
+    )
+    let newGroupId = ''
+    let failed = false
+    try {
+      await program.rpc.create(groupHash, newGroupId, true, name, encryptionKey, dbType, {
         accounts: {
           group: group[0],
           invitation: inv1[0],
@@ -174,7 +233,7 @@ describe('groupchats', () => {
       await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
       'confirmed',
     )
-    await program.rpc.create(groupHash, groupId, true, name, encryptionKey, {
+    await program.rpc.create(groupHash, groupId, true, name, encryptionKey, dbType, {
       accounts: {
         group: group[0],
         invitation: inv1[0],
@@ -192,8 +251,56 @@ describe('groupchats', () => {
     assert.ok(invitationAccount.sender.equals(user1.publicKey))
   })
 
+  it('Admin cannot invites new user if we put a wrong groupId (more then 160 characters)', async () => {
+    const newGroupId = 'dhfskjdfhsdjkfhsdjkfhdsjkhdjkfdhfskjdfhsdjkfhsdjkfhdsjkhdjkfdfrtt'.repeat(5)
+    try {
+      await program.rpc.invite(newGroupId, user2.publicKey, encryptionKey, dbType, {
+        accounts: {
+          newInvitation: inv2[0],
+          group: group[0],
+          invitation: inv1[0],
+          signer: user1.publicKey,
+          payer: user1.publicKey,
+          systemProgram: SystemProgram.programId,
+        },
+        signers: [user1],
+      })
+    } catch(err) {
+      const errMsg = 'The field is too short or too long'
+      assert.equal(err.toString(), errMsg)
+    }
+
+    let groupAccount = await program.account.group.fetch(group[0])
+
+    assert.ok(groupAccount.members == 1)
+  })
+
+  it('Admin cannot invites new user if we put an empty groupId', async () => {
+    const newGroupId = ''
+    try {
+      await program.rpc.invite(newGroupId, user2.publicKey, encryptionKey, dbType, {
+        accounts: {
+          newInvitation: inv2[0],
+          group: group[0],
+          invitation: inv1[0],
+          signer: user1.publicKey,
+          payer: user1.publicKey,
+          systemProgram: SystemProgram.programId,
+        },
+        signers: [user1],
+      })
+    } catch(err) {
+      const errMsg = 'The field is too short or too long'
+      assert.equal(err.toString(), errMsg)
+    }
+
+    let groupAccount = await program.account.group.fetch(group[0])
+
+    assert.ok(groupAccount.members == 1)
+  })
+
   it('Admin invites new user', async () => {
-    await program.rpc.invite(groupId, user2.publicKey, encryptionKey, {
+    await program.rpc.invite(groupId, user2.publicKey, encryptionKey, dbType, {
       accounts: {
         newInvitation: inv2[0],
         group: group[0],
@@ -220,7 +327,7 @@ describe('groupchats', () => {
       'confirmed',
     )
 
-    await program.rpc.invite(groupId, user3.publicKey, encryptionKey, {
+    await program.rpc.invite(groupId, user3.publicKey, encryptionKey, dbType, {
       accounts: {
         newInvitation: inv3[0],
         group: group[0],
@@ -326,7 +433,7 @@ describe('groupchats', () => {
 
   it('User now cannot invite new user', async () => {
     try {
-      await program.rpc.invite(groupId, user4.publicKey, encryptionKey, {
+      await program.rpc.invite(groupId, user4.publicKey, encryptionKey, dbType, {
         accounts: {
           newInvitation: inv4[0],
           group: group[0],
@@ -452,7 +559,7 @@ describe('groupchats', () => {
   })
 
   it('Admin invites old user back', async () => {
-    await program.rpc.invite(groupId, user2.publicKey, encryptionKey, {
+    await program.rpc.invite(groupId, user2.publicKey, encryptionKey, dbType, {
       accounts: {
         newInvitation: inv2[0],
         group: group[0],

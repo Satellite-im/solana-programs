@@ -9,47 +9,56 @@ const PUBKEY_LENGTH: usize = 32;
 const BOOL_LENGTH: usize = 1; 
 const STRING_LENGTH_PREFIX: usize = 4;
 const STRING_LENGTH_NAME: usize = 64;
-const ARRAY_LENGTH_GROUP_ID: usize = 64;
+const STRING_LENGTH_GROUP_ID: usize = 160;
 const U8_LENGTH: usize = 1;
 const STRING_LENGTH_ENCRYPTION_KEY: usize = 64;
+const DB_TYPE_LENGTH: usize = 1;
 
 #[program]
 pub mod groupchats {
     use super::*;
 
-    pub fn create(ctx: Context<Create>, _group_hash: [u8; 32], group_id: [u8; 64], open_invites: bool, name: String, encryption_key: String) -> ProgramResult {
+    pub fn create(ctx: Context<Create>, _group_hash: [u8; 32], group_id: String, open_invites: bool, name: String, encryption_key: String, db_type: u8) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let invitation = &mut ctx.accounts.invitation;
         group.creator = ctx.accounts.payer.key();
         group.admin = ctx.accounts.signer.key();
         group.open_invites = open_invites;
         group.members = 1;
-
+        
         length_check(&name, 3, 64, true)?;
         group.name = name;
-        
+
         invitation.sender = ctx.accounts.payer.key();
         invitation.group_key = group.key();
         invitation.recipient = ctx.accounts.signer.key();
+
+        length_check(&group_id, 1, 160, true)?;
         invitation.group_id = group_id;
 
         length_check(&encryption_key, 64, 64, true)?;
         invitation.encryption_key = encryption_key;
 
+        invitation.db_type = db_type;
+
         Ok(())
     }
 
-    pub fn invite(ctx: Context<Invite>, group_id: [u8; 64], recipient: Pubkey, encryption_key: String) -> ProgramResult {
+    pub fn invite(ctx: Context<Invite>, group_id: String, recipient: Pubkey, encryption_key: String, db_type: u8) -> ProgramResult {
         let group = &mut ctx.accounts.group;
         let new_invitation = &mut ctx.accounts.new_invitation;
         group.members += 1;
         new_invitation.sender = ctx.accounts.payer.key();
         new_invitation.group_key = group.key();
         new_invitation.recipient = recipient;
+
+        length_check(&group_id, 1, 160, true)?;
         new_invitation.group_id = group_id;
 
         length_check(&encryption_key, 64, 64, true)?;
         new_invitation.encryption_key = encryption_key;
+
+        new_invitation.db_type = db_type;
         
         Ok(())
     }
@@ -120,7 +129,7 @@ pub struct Create<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(group_id: [u8; 64], recipient: Pubkey)]
+#[instruction(group_id: String, recipient: Pubkey)]
 pub struct Invite<'info> {
     #[account(
         init,
@@ -262,8 +271,9 @@ pub struct Invitation {
     pub sender: Pubkey,
     pub group_key: Pubkey,
     pub recipient: Pubkey,
-    pub group_id: [u8; 64],
+    pub group_id: String,
     pub encryption_key: String,
+    pub db_type: u8,
 }
 
 impl Invitation {
@@ -271,8 +281,9 @@ impl Invitation {
     + PUBKEY_LENGTH
     + PUBKEY_LENGTH
     + PUBKEY_LENGTH
-    + ARRAY_LENGTH_GROUP_ID
-    + STRING_LENGTH_PREFIX + STRING_LENGTH_ENCRYPTION_KEY;
+    + STRING_LENGTH_PREFIX +STRING_LENGTH_GROUP_ID
+    + STRING_LENGTH_PREFIX + STRING_LENGTH_ENCRYPTION_KEY
+    + DB_TYPE_LENGTH;
 }
 
 #[error]
