@@ -51,7 +51,6 @@ describe('friends', () => {
             new Promise(r => setTimeout(r, 5000));
         }
 
-
     const user3_seed = user3.publicKey.toBuffer()
     const user4_seed = user4.publicKey.toBuffer()
         
@@ -96,6 +95,7 @@ describe('friends', () => {
           await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
           'confirmed',
         )
+        try{
         await program.rpc.makeRequest(user1.publicKey, user2.publicKey, k, {
         accounts: {
             request: request[0],
@@ -105,6 +105,9 @@ describe('friends', () => {
         },
         signers: [user1],
         })
+        } catch(err) {
+            console.log(err)
+        }
         
         let requestAccount = await program.account.friendRequest.fetch(request[0])
         const requestAccountsAll = await program.account.friendRequest.all()
@@ -132,7 +135,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -140,8 +143,15 @@ describe('friends', () => {
                 }
             }
         ])
-
-      
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
         assert.ok(requestAccount.fromEncryptedKey == k)
@@ -151,12 +161,12 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
 
     })
 
-
-    it('User 2 cannot create a new request for user 1 (payer user 2) after user 1 creates the request for user 2', async () => {
+    it('User 2 cannot create a new request for user 1 (also with different payer) after user 1 creates the request for user 2, is the same request', async () => {
         // Airdropping tokens to a payer.
         await provider.connection.confirmTransaction(
           await provider.connection.requestAirdrop(user2.publicKey, 10000000000),
@@ -203,7 +213,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -211,6 +221,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -221,11 +240,12 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
 
     })
 
-    it('Extern user cannot create a new request for user1 and user 2', async () => {
+    it('Extern user cannot create a new request for user1 and user 2, only people involved can', async () => {
         // Airdropping tokens to a payer.
         await provider.connection.confirmTransaction(
           await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
@@ -273,11 +293,19 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
                     bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
                 }
             }
         ])
@@ -287,94 +315,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
-       
-    })
-
-    it('User 5 cannot create a request for user 6 if public key (numeric value) of user 5 is less then public key of user 6', async () => {
-    let user5 = anchor.web3.Keypair.generate()
-    let user6 = anchor.web3.Keypair.generate()
-
-    let intPublicKeyUser5 = parseInt(Buffer.from(bs58.decode(user5.publicKey.toBase58())).toString('hex'), 16)
-    let intPublicKeyUser6 = parseInt(Buffer.from(bs58.decode(user6.publicKey.toBase58())).toString('hex'), 16)
-    if (intPublicKeyUser5 > intPublicKeyUser6) {
-            const tmp = user6;
-            user6 = user5;
-            user5 = tmp;
-            // take some second in order the changes to take effect
-            new Promise(r => setTimeout(r, 5000));
-        }
-
-
-    const user5_seed = user5.publicKey.toBuffer()
-    const user6_seed = user6.publicKey.toBuffer()
-        
-    const newRequest = anchor.utils.publicKey.findProgramAddressSync(
-            [user5_seed, user6_seed],
-            program.programId,
-    )
-    // Airdropping tokens to a payer.
-    await provider.connection.confirmTransaction(
-        await provider.connection.requestAirdrop(otherUser.publicKey, 10000000000),
-        'confirmed',
-    )
-    let failed = false
-    try {
-        await program.rpc.makeRequest(user5.publicKey, user6.publicKey, k, {
-        accounts: {
-            request: newRequest[0],
-            user: user5.publicKey,
-            payer: otherUser.publicKey,
-            systemProgram: SystemProgram.programId,
-        },
-        signers: [user5, otherUser],
-        })
-    } catch(err) {
-        const errMsg = "User1 and user2 needs to be passed in order"
-        assert.equal(errMsg, err.msg)
-        failed = true
-    }
-    
-    const requestAccountsAll = await program.account.friendRequest.all()
-    const requestAccountsPending = await program.account.friendRequest.all([
-        {
-            memcmp: {
-                offset: 8+32,
-                bytes: microbs58(Buffer.from([1])),
-            }
-        }
-    ])
-    const requestAccountsAccepted = await program.account.friendRequest.all([
-        {
-            memcmp: {
-                offset: 8+32,
-                bytes: microbs58(Buffer.from([2])),
-            }
-        }
-    ])
-    const requestAccountsDenied = await program.account.friendRequest.all([
-        {
-            memcmp: {
-                offset: 8+32,
-                bytes: microbs58(Buffer.from([3])),
-            }
-        }
-    ])
-    const requestAccountsRemoved = await program.account.friendRequest.all([
-        {
-            memcmp: {
-                offset: 8+32,
-                bytes: microbs58(Buffer.from([4])),
-            }
-        }
-    ])
-
-    assert.ok(failed)
-    assert.ok(requestAccountsAll.length == 1)
-    assert.ok(requestAccountsPending.length == 1)
-    assert.ok(requestAccountsAccepted.length == 0)
-    assert.ok(requestAccountsDenied.length == 0)
-    assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
        
     })
 
@@ -420,11 +362,19 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
                     bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
                 }
             }
         ])
@@ -438,7 +388,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 2)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
        
     })
 
@@ -481,7 +432,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -489,6 +440,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -499,7 +459,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 2)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
@@ -542,7 +503,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -550,6 +511,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -560,7 +530,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 2)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
@@ -599,7 +570,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -607,6 +578,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -617,7 +597,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 1)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
@@ -661,7 +642,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -669,6 +650,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -679,12 +669,13 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 1)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
         
     })
 
-    it('Creates a new request after denied from user 1 (payer user 1)', async () => {
+    it('Remake a request after denied from user 1 (same payer)', async () => {
         // Airdropping tokens to a payer.
         await provider.connection.confirmTransaction(
           await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
@@ -726,11 +717,19 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
                     bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
                 }
             }
         ])
@@ -744,7 +743,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 2)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
        
     })
@@ -788,7 +788,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -796,6 +796,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -806,7 +815,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 2)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
@@ -849,7 +859,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -857,6 +867,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -867,7 +886,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 2)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
@@ -906,7 +926,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -914,6 +934,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -924,7 +953,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 1)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
 
         
     })
@@ -969,7 +999,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -977,6 +1007,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -987,11 +1026,12 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 1)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
-    it('user 1 cannot create a new request for user 2 when it is already accepted', async () => {
+    it('user 1 cannot make a new request for user 2 when it is already accepted', async () => {
         // Airdropping tokens to a payer.
         await provider.connection.confirmTransaction(
           await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
@@ -1038,7 +1078,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -1046,6 +1086,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -1056,7 +1105,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 1)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
        
     })
 
@@ -1065,8 +1115,7 @@ describe('friends', () => {
             await program.rpc.removeRequest({
             accounts: {
                 request: request[0],
-                user: user1.publicKey,
-                payer: user1.publicKey
+                user: user1.publicKey
             },
             signers: [user1],
             })
@@ -1101,11 +1150,19 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
                     bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
                 }
             }
         ])
@@ -1119,19 +1176,96 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 1)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
+    it('User 1 cannot delete request if it is in accepted status', async () => {
+        // Airdropping tokens to a payer.
+        await provider.connection.confirmTransaction(
+          await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
+          'confirmed',
+        )
+        try {
+        await program.rpc.closeRequest( {
+        accounts: {
+            request: request[0],
+            user: user1.publicKey,
+            payer: user1.publicKey,
+        },
+        signers: [user1],
+        })
+        } catch(err) {
+            const errMsg = "Request is not removed yet"
+            assert.equal(errMsg, err.msg)
+        }
+        
+        let requestAccount = await program.account.friendRequest.fetch(request[0])
+        const requestAccountsAll = await program.account.friendRequest.all()
+        const requestAccountsPending = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([1])),
+                }
+            }
+        ])
+        const requestAccountsAccepted = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([2])),
+                }
+            }
+        ])
+        const requestAccountsDenied = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([3])),
+                }
+            }
+        ])
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+       
+        assert.ok(requestAccount.from.equals(user1.publicKey))
+        assert.ok(requestAccount.to.equals(user2.publicKey))
+        assert.ok(requestAccount.fromEncryptedKey == k)
+        assert.ok(requestAccount.toEncryptedKey == k)
+        assert.ok(Object.keys(requestAccount.status)[0] == 'accepted')
+        assert.ok(requestAccountsAll.length == 2)
+        assert.ok(requestAccountsPending.length == 1)
+        assert.ok(requestAccountsAccepted.length == 1)
+        assert.ok(requestAccountsDenied.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
+       
+    })
+    
     it('Impostor cannot remove any request', async () => {
         try{
             await program.rpc.removeRequest({
             accounts: {
                 request: request[0],
                 user: otherUser.publicKey,
-                payer: user1.publicKey
             },
-            signers: [user1, otherUser],
+            signers: [otherUser],
             })
         } catch(err) {
             const errMsg = "User can't perform this action"
@@ -1164,11 +1298,19 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
                     bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
                 }
             }
         ])
@@ -1182,7 +1324,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 1)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
@@ -1226,11 +1369,19 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
                     bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
                 }
             }
         ])
@@ -1244,7 +1395,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 1)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
@@ -1284,7 +1436,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -1292,17 +1444,27 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
         assert.ok(requestAccount.fromEncryptedKey == "")
         assert.ok(requestAccount.toEncryptedKey == "")
-        assert.ok(Object.keys(requestAccount.status)[0] == 'removed')
+        assert.ok(Object.keys(requestAccount.status)[0] == 'removedFriend')
         assert.ok(requestAccountsAll.length == 2)
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 1)
+        assert.ok(requestAccountsFriendRemoved.length == 1)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
@@ -1346,7 +1508,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -1354,17 +1516,27 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
         assert.ok(requestAccount.fromEncryptedKey == "")
         assert.ok(requestAccount.toEncryptedKey == "")
-        assert.ok(Object.keys(requestAccount.status)[0] == 'removed')
+        assert.ok(Object.keys(requestAccount.status)[0] == 'removedFriend')
         assert.ok(requestAccountsAll.length == 2)
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 1)
+        assert.ok(requestAccountsFriendRemoved.length == 1)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
@@ -1410,7 +1582,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -1418,6 +1590,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -1428,7 +1609,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 2)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
        
     })
 
@@ -1467,7 +1649,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -1475,6 +1657,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -1485,7 +1676,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 1)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
@@ -1528,7 +1720,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -1536,6 +1728,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -1546,18 +1747,17 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 1)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
-
-    it('User 1 (payer) cannot remove accepted request', async () => {
+    it('User 1 cannot remove accepted request', async () => {
         try{
             await program.rpc.removeRequest({
             accounts: {
                 request: request[0],
                 user: user1.publicKey,
-                payer: user1.publicKey
             },
             signers: [user1],
             })
@@ -1592,7 +1792,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -1600,6 +1800,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+       
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -1610,7 +1819,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 1)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
@@ -1653,7 +1863,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -1661,80 +1871,27 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
         assert.ok(requestAccount.fromEncryptedKey == "")
         assert.ok(requestAccount.toEncryptedKey == "")
-        assert.ok(Object.keys(requestAccount.status)[0] == 'removed')
+        assert.ok(Object.keys(requestAccount.status)[0] == 'removedFriend')
         assert.ok(requestAccountsAll.length == 2)
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 1)
-        
-    })
-
-    it('User 1 (payer) cannot remove request with different payer', async () => {
-        try{
-            await program.rpc.removeRequest({
-            accounts: {
-                request: request[0],
-                user: user1.publicKey,
-                payer: otherUser.publicKey
-            },
-            signers: [user1, otherUser],
-            })
-        } catch(err) {
-            const errMsg = "Account was not created by provided user"
-            assert.equal(errMsg, err.msg)
-        }
-        
-        let requestAccount = await program.account.friendRequest.fetch(request[0])
-        const requestAccountsAll = await program.account.friendRequest.all()
-        const requestAccountsPending = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32,
-                    bytes: microbs58(Buffer.from([1])),
-                }
-            }
-        ])
-        const requestAccountsAccepted = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32,
-                    bytes: microbs58(Buffer.from([2])),
-                }
-            }
-        ])
-        const requestAccountsDenied = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32,
-                    bytes: microbs58(Buffer.from([3])),
-                }
-            }
-        ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
-            {
-                memcmp: {
-                    offset: 8+32,
-                    bytes: microbs58(Buffer.from([4])),
-                }
-            }
-        ])
-       
-        assert.ok(requestAccount.from.equals(user1.publicKey))
-        assert.ok(requestAccount.to.equals(user2.publicKey))
-        assert.ok(requestAccount.fromEncryptedKey == "")
-        assert.ok(requestAccount.toEncryptedKey == "")
-        assert.ok(Object.keys(requestAccount.status)[0] == 'removed')
-        assert.ok(requestAccountsAll.length == 2)
-        assert.ok(requestAccountsPending.length == 1)
-        assert.ok(requestAccountsAccepted.length == 0)
-        assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 1)
+        assert.ok(requestAccountsFriendRemoved.length == 1)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
         
     })
 
@@ -1780,7 +1937,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -1788,6 +1945,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -1798,26 +1964,21 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 2)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
        
     })
 
-    it('User 1 removes request (payer user 1)', async () => {
+    it('User 1 removes request', async () => {
         await program.rpc.removeRequest({
         accounts: {
             request: request[0],
             user: user1.publicKey,
-            payer: user1.publicKey
         },
         signers: [user1],
         })
-        let failed = false
-        try{
-            let requestAccount = await program.account.friendRequest.fetch(request[0])
-        } catch (err) {
-            failed = true
-        }
         
+        let requestAccount = await program.account.friendRequest.fetch(request[0])
         const requestAccountsAll = await program.account.friendRequest.all()
         const requestAccountsPending = await program.account.friendRequest.all([
             {
@@ -1843,7 +2004,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -1851,14 +2012,482 @@ describe('friends', () => {
                 }
             }
         ])
-
-        assert.ok(failed)
-        assert.ok(requestAccountsAll.length == 1)
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
+        assert.ok(requestAccount.from.equals(user1.publicKey))
+        assert.ok(requestAccount.to.equals(user2.publicKey))
+        assert.ok(requestAccount.fromEncryptedKey == "")
+        assert.ok(requestAccount.toEncryptedKey == "")
+        assert.ok(Object.keys(requestAccount.status)[0] == 'requestRemoved')
+        assert.ok(requestAccountsAll.length == 2)
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 1)
 
+    })
+
+    it('User 1 remake request and then remove it again', async () => {
+        // Airdropping tokens to a payer.
+        await provider.connection.confirmTransaction(
+          await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
+          'confirmed',
+        )
+        await program.rpc.makeRequest(user1.publicKey, user2.publicKey, k, {
+        accounts: {
+            request: request[0],
+            user: user1.publicKey,
+            payer: user1.publicKey,
+            systemProgram: SystemProgram.programId,
+        },
+        signers: [user1],
+        })
+
+        await program.rpc.removeRequest({
+            accounts: {
+                request: request[0],
+                user: user1.publicKey,
+            },
+            signers: [user1],
+            })
+        
+        let requestAccount = await program.account.friendRequest.fetch(request[0])
+        const requestAccountsAll = await program.account.friendRequest.all()
+        const requestAccountsPending = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([1])),
+                }
+            }
+        ])
+        const requestAccountsAccepted = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([2])),
+                }
+            }
+        ])
+        const requestAccountsDenied = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([3])),
+                }
+            }
+        ])
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
+       
+        assert.ok(requestAccount.from.equals(user1.publicKey))
+        assert.ok(requestAccount.to.equals(user2.publicKey))
+        assert.ok(requestAccount.fromEncryptedKey == "")
+        assert.ok(requestAccount.toEncryptedKey == "")
+        assert.ok(Object.keys(requestAccount.status)[0] == 'requestRemoved')
+        assert.ok(requestAccountsAll.length == 2)
+        assert.ok(requestAccountsPending.length == 1)
+        assert.ok(requestAccountsAccepted.length == 0)
+        assert.ok(requestAccountsDenied.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 1)
+
+       
+    })
+
+    it('User 1 remake request, deny it, then remove it again', async () => {
+        // Airdropping tokens to a payer.
+        await provider.connection.confirmTransaction(
+          await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
+          'confirmed',
+        )
+        await program.rpc.makeRequest(user1.publicKey, user2.publicKey, k, {
+        accounts: {
+            request: request[0],
+            user: user1.publicKey,
+            payer: user1.publicKey,
+            systemProgram: SystemProgram.programId,
+        },
+        signers: [user1],
+        })
+
+        await program.rpc.denyRequest({
+            accounts: {
+                request: request[0],
+                user: user2.publicKey,
+            },
+            signers: [user2],
+            })
+
+        await program.rpc.removeRequest({
+            accounts: {
+                request: request[0],
+                user: user1.publicKey,
+            },
+            signers: [user1],
+            })
+        
+        let requestAccount = await program.account.friendRequest.fetch(request[0])
+        const requestAccountsAll = await program.account.friendRequest.all()
+        const requestAccountsPending = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([1])),
+                }
+            }
+        ])
+        const requestAccountsAccepted = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([2])),
+                }
+            }
+        ])
+        const requestAccountsDenied = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([3])),
+                }
+            }
+        ])
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
+       
+        assert.ok(requestAccount.from.equals(user1.publicKey))
+        assert.ok(requestAccount.to.equals(user2.publicKey))
+        assert.ok(requestAccount.fromEncryptedKey == "")
+        assert.ok(requestAccount.toEncryptedKey == "")
+        assert.ok(Object.keys(requestAccount.status)[0] == 'requestRemoved')
+        assert.ok(requestAccountsAll.length == 2)
+        assert.ok(requestAccountsPending.length == 1)
+        assert.ok(requestAccountsAccepted.length == 0)
+        assert.ok(requestAccountsDenied.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 1)
+
+       
+    })
+
+    it('User 1 remake request, accepts it, then remove friend and finally remove the request again', async () => {
+        // Airdropping tokens to a payer.
+        await provider.connection.confirmTransaction(
+          await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
+          'confirmed',
+        )
+        await program.rpc.makeRequest(user1.publicKey, user2.publicKey, k, {
+        accounts: {
+            request: request[0],
+            user: user1.publicKey,
+            payer: user1.publicKey,
+            systemProgram: SystemProgram.programId,
+        },
+        signers: [user1],
+        })
+
+        await program.rpc.acceptRequest(k, {
+            accounts: {
+                request: request[0],
+                user: user2.publicKey,
+            },
+            signers: [user2],
+            })
+        
+        await program.rpc.removeFriend({
+                accounts: {
+                    request: request[0],
+                    user: user1.publicKey,
+                },
+                signers: [user1],
+                })
+
+        await program.rpc.removeRequest({
+            accounts: {
+                request: request[0],
+                user: user1.publicKey,
+            },
+            signers: [user1],
+            })
+        
+        let requestAccount = await program.account.friendRequest.fetch(request[0])
+        const requestAccountsAll = await program.account.friendRequest.all()
+        const requestAccountsPending = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([1])),
+                }
+            }
+        ])
+        const requestAccountsAccepted = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([2])),
+                }
+            }
+        ])
+        const requestAccountsDenied = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([3])),
+                }
+            }
+        ])
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
+       
+        assert.ok(requestAccount.from.equals(user1.publicKey))
+        assert.ok(requestAccount.to.equals(user2.publicKey))
+        assert.ok(requestAccount.fromEncryptedKey == "")
+        assert.ok(requestAccount.toEncryptedKey == "")
+        assert.ok(Object.keys(requestAccount.status)[0] == 'requestRemoved')
+        assert.ok(requestAccountsAll.length == 2)
+        assert.ok(requestAccountsPending.length == 1)
+        assert.ok(requestAccountsAccepted.length == 0)
+        assert.ok(requestAccountsDenied.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 1)
+
+       
+    })
+
+    it('User 1 remake request, accepts it, but cannot remove the request again', async () => {
+        // Airdropping tokens to a payer.
+        await provider.connection.confirmTransaction(
+          await provider.connection.requestAirdrop(user1.publicKey, 10000000000),
+          'confirmed',
+        )
+        await program.rpc.makeRequest(user1.publicKey, user2.publicKey, k, {
+        accounts: {
+            request: request[0],
+            user: user1.publicKey,
+            payer: user1.publicKey,
+            systemProgram: SystemProgram.programId,
+        },
+        signers: [user1],
+        })
+
+        await program.rpc.acceptRequest(k, {
+            accounts: {
+                request: request[0],
+                user: user2.publicKey,
+            },
+            signers: [user2],
+            })
+        
+        try {
+        await program.rpc.removeRequest({
+            accounts: {
+                request: request[0],
+                user: user1.publicKey,
+            },
+            signers: [user1],
+            })
+        } catch(err) {
+            const errMsg = "Users are already friends"
+            assert.equal(errMsg, err.msg)
+        }
+        
+        let requestAccount = await program.account.friendRequest.fetch(request[0])
+        const requestAccountsAll = await program.account.friendRequest.all()
+        const requestAccountsPending = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([1])),
+                }
+            }
+        ])
+        const requestAccountsAccepted = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([2])),
+                }
+            }
+        ])
+        const requestAccountsDenied = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([3])),
+                }
+            }
+        ])
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
+       
+        assert.ok(requestAccount.from.equals(user1.publicKey))
+        assert.ok(requestAccount.to.equals(user2.publicKey))
+        assert.ok(requestAccount.fromEncryptedKey == k)
+        assert.ok(requestAccount.toEncryptedKey == k)
+        assert.ok(Object.keys(requestAccount.status)[0] == 'accepted')
+        assert.ok(requestAccountsAll.length == 2)
+        assert.ok(requestAccountsPending.length == 1)
+        assert.ok(requestAccountsAccepted.length == 1)
+        assert.ok(requestAccountsDenied.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
+
+       
+    })
+
+    it('User 1 cannot remove a request for user 2 if the request is in removed state (accepted -> remove friend -> remove request -> remove request again)', async () => {
+
+        await program.rpc.removeFriend({
+            accounts: {
+                request: request[0],
+                user: user1.publicKey,
+            },
+            signers: [user1],
+            })
+        await program.rpc.removeRequest({
+                accounts: {
+                    request: request[0],
+                    user: user1.publicKey,
+                },
+                signers: [user1],
+                })
+        try{
+            await program.rpc.removeRequest({
+            accounts: {
+                request: request[0],
+                user: user1.publicKey
+            },
+            signers: [user1],
+            })
+        } catch(err) {
+            const errMsg = "Request is already removed"
+            assert.equal(errMsg, err.msg)
+        }
+
+        let requestAccount = await program.account.friendRequest.fetch(request[0])
+        const requestAccountsAll = await program.account.friendRequest.all()
+        const requestAccountsPending = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([1])),
+                }
+            }
+        ])
+        const requestAccountsAccepted = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([2])),
+                }
+            }
+        ])
+        const requestAccountsDenied = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([3])),
+                }
+            }
+        ])
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+       
+        assert.ok(requestAccount.from.equals(user1.publicKey))
+        assert.ok(requestAccount.to.equals(user2.publicKey))
+        assert.ok(requestAccount.fromEncryptedKey == "")
+        assert.ok(requestAccount.toEncryptedKey == "")
+        assert.ok(Object.keys(requestAccount.status)[0] == 'requestRemoved')
+        assert.ok(requestAccountsAll.length == 2)
+        assert.ok(requestAccountsPending.length == 1)
+        assert.ok(requestAccountsAccepted.length == 0)
+        assert.ok(requestAccountsDenied.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 1)
+        
     })
 
     it('Create the same request as before after deleting it', async () => {
@@ -1903,7 +2532,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -1911,6 +2540,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -1921,19 +2559,37 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 2)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
        
     })
 
-    it('User 1 removes request again (payer user 1)', async () => {
-        await program.rpc.removeRequest({
-        accounts: {
-            request: request[0],
-            user: user1.publicKey,
-            payer: user1.publicKey
-        },
-        signers: [user1],
-        })
+    it('User 1 close request when user 2 accept it and then remove friend', async () => {
+
+        await program.rpc.acceptRequest(k, {
+            accounts: {
+                request: request[0],
+                user: user2.publicKey,
+            },
+            signers: [user2],
+            })
+        
+        await program.rpc.removeFriend({
+            accounts: {
+                request: request[0],
+                user: user1.publicKey,
+            },
+            signers: [user1],
+            })
+
+        await program.rpc.closeRequest( {
+            accounts: {
+                request: request[0],
+                user: user1.publicKey,
+                payer: user1.publicKey,
+            },
+            signers: [user1],
+            })
         let failed = false
         try{
             let requestAccount = await program.account.friendRequest.fetch(request[0])
@@ -1966,7 +2622,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -1974,31 +2630,34 @@ describe('friends', () => {
                 }
             }
         ])
-
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
         assert.ok(failed)
         assert.ok(requestAccountsAll.length == 1)
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
 
     })
 
-    it('User 3 removes request again (payer other user)', async () => {
+    it('User 3 removes request again', async () => {
         await program.rpc.removeRequest({
         accounts: {
             request: newRequest[0],
             user: user3.publicKey,
-            payer: otherUser.publicKey
         },
-        signers: [user3, otherUser],
+        signers: [user3],
         })
-        let failed = false
-        try{
-            let requestAccount = await program.account.friendRequest.fetch(newRequest[0])
-        } catch (err) {
-            failed = true
-        }
+        
 
         const requestAccountsAll = await program.account.friendRequest.all()
         const requestAccountsPending = await program.account.friendRequest.all([
@@ -2025,7 +2684,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -2033,13 +2692,23 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
         
-        assert.ok(failed)
-        assert.ok(requestAccountsAll.length == 0)
+        
+        
+        assert.ok(requestAccountsAll.length == 1)
         assert.ok(requestAccountsPending.length == 0)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 1)
 
     })
     
@@ -2094,7 +2763,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -2102,6 +2771,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user3.publicKey))
         assert.ok(requestAccount.to.equals(user4.publicKey))
@@ -2112,7 +2790,8 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 1)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
        
     })
 
@@ -2158,7 +2837,7 @@ describe('friends', () => {
                 }
             }
         ])
-        const requestAccountsRemoved = await program.account.friendRequest.all([
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
             {
                 memcmp: {
                     offset: 8+32,
@@ -2166,6 +2845,15 @@ describe('friends', () => {
                 }
             }
         ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+        
        
         assert.ok(requestAccount.from.equals(user1.publicKey))
         assert.ok(requestAccount.to.equals(user2.publicKey))
@@ -2176,8 +2864,104 @@ describe('friends', () => {
         assert.ok(requestAccountsPending.length == 2)
         assert.ok(requestAccountsAccepted.length == 0)
         assert.ok(requestAccountsDenied.length == 0)
-        assert.ok(requestAccountsRemoved.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
        
     })
+
+    it('User 5 cannot create a request for user 6 if public key (numeric value) of user 5 is less then public key of user 6', async () => {
+        let user5 = anchor.web3.Keypair.generate()
+        let user6 = anchor.web3.Keypair.generate()
+    
+        let intPublicKeyUser5 = parseInt(Buffer.from(bs58.decode(user5.publicKey.toBase58())).toString('hex'), 16)
+        let intPublicKeyUser6 = parseInt(Buffer.from(bs58.decode(user6.publicKey.toBase58())).toString('hex'), 16)
+        if (intPublicKeyUser5 > intPublicKeyUser6) {
+                const tmp = user6;
+                user6 = user5;
+                user5 = tmp;
+                // take some second in order the changes to take effect
+                new Promise(r => setTimeout(r, 5000));
+            }
+    
+        const user5_seed = user5.publicKey.toBuffer()
+        const user6_seed = user6.publicKey.toBuffer()
+            
+        const newRequest = anchor.utils.publicKey.findProgramAddressSync(
+                [user5_seed, user6_seed],
+                program.programId,
+        )
+        // Airdropping tokens to a payer.
+        await provider.connection.confirmTransaction(
+            await provider.connection.requestAirdrop(otherUser.publicKey, 10000000000),
+            'confirmed',
+        )
+        let failed = false
+        try {
+            await program.rpc.makeRequest(user5.publicKey, user6.publicKey, k, {
+            accounts: {
+                request: newRequest[0],
+                user: user5.publicKey,
+                payer: otherUser.publicKey,
+                systemProgram: SystemProgram.programId,
+            },
+            signers: [user5, otherUser],
+            })
+        } catch(err) {
+            const errMsg = "User1 and user2 needs to be passed in order"
+            assert.equal(errMsg, err.msg)
+            failed = true
+        }
+        
+        const requestAccountsAll = await program.account.friendRequest.all()
+        const requestAccountsPending = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([1])),
+                }
+            }
+        ])
+        const requestAccountsAccepted = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([2])),
+                }
+            }
+        ])
+        const requestAccountsDenied = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([3])),
+                }
+            }
+        ])
+        const requestAccountsFriendRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([4])),
+                }
+            }
+        ])
+        const requestAccountsRequestRemoved = await program.account.friendRequest.all([
+            {
+                memcmp: {
+                    offset: 8+32,
+                    bytes: microbs58(Buffer.from([5])),
+                }
+            }
+        ])
+    
+        assert.ok(failed)
+        assert.ok(requestAccountsAll.length == 2)
+        assert.ok(requestAccountsPending.length == 2)
+        assert.ok(requestAccountsAccepted.length == 0)
+        assert.ok(requestAccountsDenied.length == 0)
+        assert.ok(requestAccountsFriendRemoved.length == 0)
+        assert.ok(requestAccountsRequestRemoved.length == 0)
+           
+        })
     
 })

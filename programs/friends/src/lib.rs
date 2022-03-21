@@ -14,11 +14,12 @@ const STRING_LENGTH_TO_ENCRYPTED_KEY: usize = 128;
 
 #[derive(Clone, Copy, AnchorSerialize, AnchorDeserialize, PartialEq)]
 pub enum Status {
-    Uninitialized,
+    Uninitilized,
     Pending,
     Accepted,
     Denied,
-    Removed
+    RemovedFriend,
+    RequestRemoved
 }
 
 #[program]
@@ -28,7 +29,8 @@ pub mod friends {
     pub fn make_request(ctx: Context<MakeRequest>, user1: Pubkey, user2: Pubkey, k: String) -> ProgramResult {
         let user = ctx.accounts.user.key();
         let request = &mut ctx.accounts.request;
-        if request.status == Status::Uninitialized {
+
+        if request.status == Status::Uninitilized {
             request.payer = ctx.accounts.payer.key();
         }
         if user == user1 {
@@ -59,13 +61,21 @@ pub mod friends {
         Ok(())
     }
 
-    pub fn remove_request(_ctx: Context<RemoveRequest>) -> ProgramResult {
+    pub fn remove_request(ctx: Context<RemoveRequest>) -> ProgramResult {
+        let request = &mut ctx.accounts.request;
+        request.status = Status::RequestRemoved;
+        request.from_encrypted_key = "".to_string();
+        request.to_encrypted_key = "".to_string();
+        Ok(())
+    }
+
+    pub fn close_request(_ctx: Context<CloseRequest>) -> ProgramResult {
         Ok(())
     }
 
     pub fn remove_friend(ctx: Context<RemoveFriend>) -> ProgramResult {
         let request = &mut ctx.accounts.request;
-        request.status = Status::Removed;
+        request.status = Status::RemovedFriend;
         request.from_encrypted_key = "".to_string();
         request.to_encrypted_key = "".to_string();
         Ok(())
@@ -122,15 +132,30 @@ pub struct DenyRequest<'info> {
 pub struct RemoveRequest<'info> {
     #[account(
         mut,
-        close = payer,
         constraint = user.key() == request.from @ ErrorCode::WrongPrivileges,
         constraint = request.status != Status::Accepted @ ErrorCode::AlreadyFriends,
+        constraint = request.status != Status::RequestRemoved @ ErrorCode::AlreadyRemoved,
+    )]
+    pub request: Account<'info, FriendRequest>,
+    pub user: Signer<'info>,
+   
+}
+
+#[derive(Accounts)]
+pub struct CloseRequest<'info> {
+    #[account(
+        mut,
+        close = payer,
+        constraint = user.key() == request.from ||
+                     user.key() == request.to @ ErrorCode::WrongPrivileges,
+        constraint = request.status == Status::RequestRemoved ||
+                     request.status == Status::RemovedFriend @ ErrorCode::NotRemoved,
         constraint = request.payer == payer.key() @ ErrorCode::PayerMismatch,
     )]
     pub request: Account<'info, FriendRequest>,
     pub user: Signer<'info>,
     #[account(mut)]
-    pub payer: Signer<'info>
+    pub payer: SystemAccount<'info>
 }
 
 #[derive(Accounts)]
@@ -183,4 +208,8 @@ pub enum ErrorCode {
     ExistentRequest,
     #[msg("Account was not created by provided user")]
     PayerMismatch,
+    #[msg("Request is not removed yet")]
+    NotRemoved,
+    #[msg("Request is already removed")]
+    AlreadyRemoved,
 }
