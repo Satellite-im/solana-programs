@@ -166,7 +166,7 @@ describe('users', () => {
   })
 
   it("Impostor cannot modify another user's extra 1", async () => {
-    const newExtra1 = "New data for extra 1 field"
+    const newExtra1 = 'New data for extra 1 field'
     try {
       await program.rpc.setExtraOne(newExtra1, {
         accounts: {
@@ -192,9 +192,8 @@ describe('users', () => {
     assert.ok(userAccountAfter.extra2 == extra2)
   })
 
-
   it("Impostor cannot modify another user's extra 2", async () => {
-    const newExtra2 = "New data for extra 2 field"
+    const newExtra2 = 'New data for extra 2 field'
     try {
       await program.rpc.setExtraTwo(newExtra2, {
         accounts: {
@@ -220,20 +219,16 @@ describe('users', () => {
     assert.ok(userAccountAfter.extra2 == extra2)
   })
 
-
   it('User modifies name', async () => {
     const newName = 'Matthew'
-      await program.rpc.setName(newName, {
-        accounts: {
-          user: userAccount[0],
-          signer: user.publicKey,
-          payer: user.publicKey,
-        },
-        signers: [user],
-      })
-
-    
-    
+    await program.rpc.setName(newName, {
+      accounts: {
+        user: userAccount[0],
+        signer: user.publicKey,
+        payer: user.publicKey,
+      },
+      signers: [user],
+    })
 
     let userAccountAfter = await program.account.user.fetch(userAccount[0])
 
@@ -245,15 +240,11 @@ describe('users', () => {
     assert.ok(userAccountAfter.extra2 == extra2)
 
     name = newName
-
-    
   })
-
-
 
   it('User cannot modify name with a word greater than 32 characters', async () => {
     const newName = 'Matthew'.repeat(10)
-    try{
+    try {
       await program.rpc.setName(newName, {
         accounts: {
           user: userAccount[0],
@@ -263,11 +254,9 @@ describe('users', () => {
         signers: [user],
       })
     } catch (error) {
-      const errMsg = 'The field is too short or too long';
+      const errMsg = 'The field is too short or too long'
       assert.equal(error.msg, errMsg)
     }
-    
-    
 
     let userAccountAfter = await program.account.user.fetch(userAccount[0])
     assert.ok(userAccountAfter.name == name)
@@ -276,15 +265,11 @@ describe('users', () => {
     assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
     assert.ok(userAccountAfter.extra1 == extra1)
     assert.ok(userAccountAfter.extra2 == extra2)
-
-
-    
   })
-
 
   it('User cannot modify name with a word less than 3 characters', async () => {
     const newName = 'Ma'
-    try{
+    try {
       await program.rpc.setName(newName, {
         accounts: {
           user: userAccount[0],
@@ -294,11 +279,9 @@ describe('users', () => {
         signers: [user],
       })
     } catch (error) {
-      const errMsg = 'The field is too short or too long';
+      const errMsg = 'The field is too short or too long'
       assert.equal(error.msg, errMsg)
     }
-    
-    
 
     let userAccountAfter = await program.account.user.fetch(userAccount[0])
     assert.ok(userAccountAfter.name == name)
@@ -307,15 +290,11 @@ describe('users', () => {
     assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
     assert.ok(userAccountAfter.extra1 == extra1)
     assert.ok(userAccountAfter.extra2 == extra2)
-
-
-    
   })
-
 
   it('User cannot modify name with an empty string', async () => {
     const newName = ''
-    try{
+    try {
       await program.rpc.setName(newName, {
         accounts: {
           user: userAccount[0],
@@ -325,11 +304,9 @@ describe('users', () => {
         signers: [user],
       })
     } catch (error) {
-      const errMsg = 'The field is too short or too long';
+      const errMsg = 'The field is too short or too long'
       assert.equal(error.msg, errMsg)
     }
-    
-    
 
     let userAccountAfter = await program.account.user.fetch(userAccount[0])
     assert.ok(userAccountAfter.name == name)
@@ -338,11 +315,7 @@ describe('users', () => {
     assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
     assert.ok(userAccountAfter.extra1 == extra1)
     assert.ok(userAccountAfter.extra2 == extra2)
-
-
-    
   })
-
 
   it('User modifies photo', async () => {
     const newPhotoHash =
@@ -368,11 +341,12 @@ describe('users', () => {
     photoHash = newPhotoHash
   })
 
-
   it('User cannot modify photo with an incorrect hash (too long)', async () => {
     const newPhotoHash =
-      'c73d08de890479518ed60cf670d17faa26a4a71f995c1dcc978165399401a6c4'.repeat(2)
-    try{  
+      'c73d08de890479518ed60cf670d17faa26a4a71f995c1dcc978165399401a6c4'.repeat(
+        2,
+      )
+    try {
       await program.rpc.setPhotoHash(newPhotoHash, {
         accounts: {
           user: userAccount[0],
@@ -394,14 +368,11 @@ describe('users', () => {
     assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
     assert.ok(userAccountAfter.extra1 == extra1)
     assert.ok(userAccountAfter.extra2 == extra2)
-
-  
   })
 
   it('User cannot modify photo with an incorrect hash (too short)', async () => {
-    const newPhotoHash =
-      'c73d08de890479518ed60cf670d17faa26a4a71f995c1dcc9781'
-    try{  
+    const newPhotoHash = 'c73d08de890479518ed60cf670d17faa26a4a71f995c1dcc9781'
+    try {
       await program.rpc.setPhotoHash(newPhotoHash, {
         accounts: {
           user: userAccount[0],
@@ -423,13 +394,11 @@ describe('users', () => {
     assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
     assert.ok(userAccountAfter.extra1 == extra1)
     assert.ok(userAccountAfter.extra2 == extra2)
-
-  
   })
 
   it('User cannot modify photo with an empty hash', async () => {
     const newPhotoHash = ''
-    try{  
+    try {
       await program.rpc.setPhotoHash(newPhotoHash, {
         accounts: {
           user: userAccount[0],
@@ -451,10 +420,7 @@ describe('users', () => {
     assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
     assert.ok(userAccountAfter.extra1 == extra1)
     assert.ok(userAccountAfter.extra2 == extra2)
-
-  
   })
-
 
   it('User modifies status', async () => {
     const newStatus =
@@ -482,8 +448,10 @@ describe('users', () => {
 
   it('User cannot modify status with a phrase greater then 128 characters', async () => {
     const newStatus =
-      "A long and passionate description which reflects user's personality, but different than the old one".repeat(5)
-    try{
+      "A long and passionate description which reflects user's personality, but different than the old one".repeat(
+        5,
+      )
+    try {
       await program.rpc.setStatus(newStatus, {
         accounts: {
           user: userAccount[0],
@@ -492,7 +460,7 @@ describe('users', () => {
         },
         signers: [user],
       })
-    } catch (error) {  
+    } catch (error) {
       const errMsg = 'The field is too short or too long'
       assert.equal(error.msg, errMsg)
     }
@@ -505,14 +473,11 @@ describe('users', () => {
     assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
     assert.ok(userAccountAfter.extra1 == extra1)
     assert.ok(userAccountAfter.extra2 == extra2)
-
-    
   })
-
 
   it('User cannot modify status with a phrase less then 3 characters', async () => {
-    const newStatus ="At"
-    try{
+    const newStatus = 'At'
+    try {
       await program.rpc.setStatus(newStatus, {
         accounts: {
           user: userAccount[0],
@@ -521,7 +486,7 @@ describe('users', () => {
         },
         signers: [user],
       })
-    } catch (error) {  
+    } catch (error) {
       const errMsg = 'The field is too short or too long'
       assert.equal(error.msg, errMsg)
     }
@@ -534,15 +499,11 @@ describe('users', () => {
     assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
     assert.ok(userAccountAfter.extra1 == extra1)
     assert.ok(userAccountAfter.extra2 == extra2)
-
-    
   })
-
-
 
   it('User modifies banner image hash', async () => {
     const newBannerImageHash =
-    'b5bd22e1e0afg51934e81388asdf23ecc560456r4324b2018ea76393ea1yury5'
+      'b5bd22e1e0afg51934e81388asdf23ecc560456r4324b2018ea76393ea1yury5'
     await program.rpc.setBannerImageHash(newBannerImageHash, {
       accounts: {
         user: userAccount[0],
@@ -566,8 +527,10 @@ describe('users', () => {
 
   it('User cannot modify banner image hash with an incorrect hash (too long)', async () => {
     const newBannerImageHash =
-    'b5bd22e1e0afg51934e81388asdf23ecc560456r4324b2018ea76393ea1yury5'.repeat(2)
-    try{
+      'b5bd22e1e0afg51934e81388asdf23ecc560456r4324b2018ea76393ea1yury5'.repeat(
+        2,
+      )
+    try {
       await program.rpc.setBannerImageHash(newBannerImageHash, {
         accounts: {
           user: userAccount[0],
@@ -589,15 +552,11 @@ describe('users', () => {
     assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
     assert.ok(userAccountAfter.extra1 == extra1)
     assert.ok(userAccountAfter.extra2 == extra2)
-
-    
   })
-
 
   it('User cannot modify banner image hash with an incorrect hash (too short)', async () => {
-    const newBannerImageHash =
-    'b5bd22e1e0afg51934e81388asdf23ecc5604'
-    try{
+    const newBannerImageHash = 'b5bd22e1e0afg51934e81388asdf23ecc5604'
+    try {
       await program.rpc.setBannerImageHash(newBannerImageHash, {
         accounts: {
           user: userAccount[0],
@@ -619,14 +578,11 @@ describe('users', () => {
     assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
     assert.ok(userAccountAfter.extra1 == extra1)
     assert.ok(userAccountAfter.extra2 == extra2)
-
-    
   })
-
 
   it('User modifies banner image hash with an empty hash', async () => {
     const newBannerImageHash = ''
-    
+
     await program.rpc.setBannerImageHash(newBannerImageHash, {
       accounts: {
         user: userAccount[0],
@@ -635,7 +591,7 @@ describe('users', () => {
       },
       signers: [user],
     })
-    
+
     let userAccountAfter = await program.account.user.fetch(userAccount[0])
 
     assert.ok(userAccountAfter.name == name)
@@ -646,12 +602,10 @@ describe('users', () => {
     assert.ok(userAccountAfter.extra2 == extra2)
 
     bannerImageHash = newBannerImageHash
-    
   })
 
-
   it('User modifies extra 1', async () => {
-    const newExtra1 = "New data for extra 1 field"
+    const newExtra1 = 'New data for extra 1 field'
     await program.rpc.setExtraOne(newExtra1, {
       accounts: {
         user: userAccount[0],
@@ -674,8 +628,8 @@ describe('users', () => {
   })
 
   it('User cannot modify extra 1 with a phrase greater then 64 characters', async () => {
-    const newExtra1 = "New data for extra 1 field".repeat(10)
-    try{
+    const newExtra1 = 'New data for extra 1 field'.repeat(10)
+    try {
       await program.rpc.setExtraOne(newExtra1, {
         accounts: {
           user: userAccount[0],
@@ -697,14 +651,11 @@ describe('users', () => {
     assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
     assert.ok(userAccountAfter.extra1 == extra1)
     assert.ok(userAccountAfter.extra2 == extra2)
-
-  
   })
 
-
   it('User modifies extra 1 with empty string', async () => {
-    const newExtra1 = ""
-    
+    const newExtra1 = ''
+
     await program.rpc.setExtraOne(newExtra1, {
       accounts: {
         user: userAccount[0],
@@ -713,7 +664,6 @@ describe('users', () => {
       },
       signers: [user],
     })
-    
 
     let userAccountAfter = await program.account.user.fetch(userAccount[0])
 
@@ -728,7 +678,7 @@ describe('users', () => {
   })
 
   it('User modifies extra 2', async () => {
-    const newExtra2 = "New data for extra 2 field"
+    const newExtra2 = 'New data for extra 2 field'
     await program.rpc.setExtraTwo(newExtra2, {
       accounts: {
         user: userAccount[0],
@@ -751,7 +701,7 @@ describe('users', () => {
   })
 
   it('User cannot modify extra 2 with a phrase greater then 64 characters', async () => {
-    const newExtra2 = "New data for extra 2 field".repeat(10)
+    const newExtra2 = 'New data for extra 2 field'.repeat(10)
     try {
       await program.rpc.setExtraTwo(newExtra2, {
         accounts: {
@@ -763,7 +713,7 @@ describe('users', () => {
       })
     } catch (error) {
       const errMsg = 'The field is too short or too long'
-      assert.equal(error.msg, errMsg)   
+      assert.equal(error.msg, errMsg)
     }
 
     let userAccountAfter = await program.account.user.fetch(userAccount[0])
@@ -774,13 +724,11 @@ describe('users', () => {
     assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
     assert.ok(userAccountAfter.extra1 == extra1)
     assert.ok(userAccountAfter.extra2 == extra2)
-
-    
   })
 
   it('User modifies extra 2 with an empty string', async () => {
-    const newExtra2 = ""
-  
+    const newExtra2 = ''
+
     await program.rpc.setExtraTwo(newExtra2, {
       accounts: {
         user: userAccount[0],
@@ -801,5 +749,4 @@ describe('users', () => {
 
     extra2 = newExtra2
   })
-
 })
