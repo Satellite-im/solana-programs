@@ -18,7 +18,7 @@ const DB_TYPE_LENGTH: usize = 1;
 pub mod groupchats {
     use super::*;
 
-    pub fn create(ctx: Context<Create>, _group_hash: [u8; 32], group_id: String, open_invites: bool, name: String, encryption_key: String, db_type: u8) -> ProgramResult {
+    pub fn create(ctx: Context<Create>, _group_hash: [u8; 32], group_id: String, open_invites: bool, name: String, encryption_key: String, db_type: u8) -> Result<()> {
         let group = &mut ctx.accounts.group;
         let invitation = &mut ctx.accounts.invitation;
         group.creator = ctx.accounts.payer.key();
@@ -44,7 +44,7 @@ pub mod groupchats {
         Ok(())
     }
 
-    pub fn invite(ctx: Context<Invite>, group_id: String, recipient: Pubkey, encryption_key: String, db_type: u8) -> ProgramResult {
+    pub fn invite(ctx: Context<Invite>, group_id: String, recipient: Pubkey, encryption_key: String, db_type: u8) -> Result<()> {
         let group = &mut ctx.accounts.group;
         let new_invitation = &mut ctx.accounts.new_invitation;
         group.members += 1;
@@ -63,20 +63,20 @@ pub mod groupchats {
         Ok(())
     }
 
-    pub fn modify_successor(ctx: Context<ModifySuccessor>) -> ProgramResult {
+    pub fn modify_successor(ctx: Context<ModifySuccessor>) -> Result<()> {
         let group = &mut ctx.accounts.group;
         let successor = &mut ctx.accounts.successor;
         group.admin = successor.recipient;
         Ok(())
     }
 
-    pub fn modify_open_ivites(ctx: Context<ModifyParameter>, open_invites: bool) -> ProgramResult {
+    pub fn modify_open_ivites(ctx: Context<ModifyParameter>, open_invites: bool) -> Result<()> {
         let group = &mut ctx.accounts.group;
         group.open_invites = open_invites;
         Ok(())
     }
 
-    pub fn modify_name(ctx: Context<ModifyParameter>, name: String) -> ProgramResult {
+    pub fn modify_name(ctx: Context<ModifyParameter>, name: String) -> Result<()> {
         let group = &mut ctx.accounts.group;
 
         length_check(&name, 3, 64, true)?;
@@ -85,20 +85,20 @@ pub mod groupchats {
         Ok(())
     }
 
-    pub fn leave(ctx: Context<Leave>) -> ProgramResult {
+    pub fn leave(ctx: Context<Leave>) -> Result<()> {
         let group = &mut ctx.accounts.group;
         group.members -= 1;
         Ok(())
     }
 
-    pub fn admin_leave(ctx: Context<AdminLeave>) -> ProgramResult {
+    pub fn admin_leave(ctx: Context<AdminLeave>) -> Result<()> {
         let group = &mut ctx.accounts.group;
         group.members -= 1;
         group.admin = ctx.accounts.successor.recipient;
         Ok(())
     }
 
-    pub fn close(_ctx: Context<Close>) -> ProgramResult {
+    pub fn close(_ctx: Context<Close>) -> Result<()> {
         Ok(())
     }
 }
@@ -286,7 +286,7 @@ impl Invitation {
     + DB_TYPE_LENGTH;
 }
 
-#[error]
+#[error_code]
 pub enum ErrorCode {
     #[msg("User cannot perform this action")]
     WrongPrivileges,
@@ -302,21 +302,21 @@ pub enum ErrorCode {
     InputError,
 }
 
-fn length_check(field: &String, min_accepted_length: usize, max_accepted_length: usize, is_mandatory: bool) -> ProgramResult {
+fn length_check(field: &String, min_accepted_length: usize, max_accepted_length: usize, is_mandatory: bool) -> Result<()> {
 
     if is_mandatory && field.chars().count() == 0 {
-        return Err(ErrorCode::IncorrectField.into())
+        return Err(error!(ErrorCode::IncorrectField))
     }
 
     if min_accepted_length > max_accepted_length {
-        return Err(ErrorCode::InputError.into())
+        return Err(error!(ErrorCode::InputError))
     } 
     
     if (field.chars().count() >= min_accepted_length && field.chars().count() <= max_accepted_length) || (field.chars().count() == 0) {
         Ok(())
     }
     else {
-        Err(ErrorCode::IncorrectField.into())
+        Err(error!(ErrorCode::IncorrectField))
     }  
     
 }

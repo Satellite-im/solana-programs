@@ -26,7 +26,7 @@ pub enum Status {
 pub mod friends {
     use super::*;
 
-    pub fn make_request(ctx: Context<MakeRequest>, user1: Pubkey, user2: Pubkey, k: String) -> ProgramResult {
+    pub fn make_request(ctx: Context<MakeRequest>, user1: Pubkey, user2: Pubkey, k: String) -> Result<()> {
         let user = ctx.accounts.user.key();
         let request = &mut ctx.accounts.request;
 
@@ -46,14 +46,14 @@ pub mod friends {
         Ok(())
     }
 
-    pub fn accept_request(ctx: Context<AcceptRequest>, k: String) -> ProgramResult {
+    pub fn accept_request(ctx: Context<AcceptRequest>, k: String) -> Result<()> {
         let request = &mut ctx.accounts.request;
         request.to_encrypted_key = k;
         request.status = Status::Accepted;
         Ok(())
     }
 
-    pub fn deny_request(ctx: Context<DenyRequest>) -> ProgramResult {
+    pub fn deny_request(ctx: Context<DenyRequest>) -> Result<()> {
         let request = &mut ctx.accounts.request;
         request.status = Status::Denied;
         request.from_encrypted_key = "".to_string();
@@ -61,7 +61,7 @@ pub mod friends {
         Ok(())
     }
 
-    pub fn remove_request(ctx: Context<RemoveRequest>) -> ProgramResult {
+    pub fn remove_request(ctx: Context<RemoveRequest>) -> Result<()> {
         let request = &mut ctx.accounts.request;
         request.status = Status::RequestRemoved;
         request.from_encrypted_key = "".to_string();
@@ -69,11 +69,11 @@ pub mod friends {
         Ok(())
     }
 
-    pub fn close_request(_ctx: Context<CloseRequest>) -> ProgramResult {
+    pub fn close_request(_ctx: Context<CloseRequest>) -> Result<()> {
         Ok(())
     }
 
-    pub fn remove_friend(ctx: Context<RemoveFriend>) -> ProgramResult {
+    pub fn remove_friend(ctx: Context<RemoveFriend>) -> Result<()> {
         let request = &mut ctx.accounts.request;
         request.status = Status::RemovedFriend;
         request.from_encrypted_key = "".to_string();
@@ -190,7 +190,7 @@ impl FriendRequest {
     + STRING_LENGTH_PREFIX + STRING_LENGTH_TO_ENCRYPTED_KEY;
 }
 
-#[error]
+#[error_code]
 pub enum ErrorCode {
     #[msg("Addresses in request don't match user address")]
     WrongRequestData,
