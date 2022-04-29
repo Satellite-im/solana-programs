@@ -19,7 +19,7 @@ const STRING_LENGTH_EXTRA_2: usize = 64;
 pub mod users {
     use super::*;
 
-    pub fn create(ctx: Context<Create>, name: String, photo_hash: String, status: String) -> ProgramResult {
+    pub fn create(ctx: Context<Create>, name: String, photo_hash: String, status: String) -> Result<()> {
         let user = &mut ctx.accounts.user;
         
         // this function do a check for the lenght of the field and has following parameter (field, min_length_accepted, max_length_accepted, is_mandatory)
@@ -39,7 +39,7 @@ pub mod users {
         Ok(())
     }
 
-    pub fn set_name(ctx: Context<Modify>, name: String) -> ProgramResult {
+    pub fn set_name(ctx: Context<Modify>, name: String) -> Result<()> {
         let user = &mut ctx.accounts.user;
 
         length_check(&name, 3, 32, true)?;
@@ -48,7 +48,7 @@ pub mod users {
         Ok(())
     }
 
-    pub fn set_photo_hash(ctx: Context<Modify>, photo_hash: String) -> ProgramResult {
+    pub fn set_photo_hash(ctx: Context<Modify>, photo_hash: String) -> Result<()> {
         let user = &mut ctx.accounts.user;
         
         length_check(&photo_hash, 64, 64, true)?;
@@ -57,7 +57,7 @@ pub mod users {
         Ok(())
     }
 
-    pub fn set_status(ctx: Context<Modify>, status: String) -> ProgramResult {
+    pub fn set_status(ctx: Context<Modify>, status: String) -> Result<()> {
         let user = &mut ctx.accounts.user;
 
         length_check(&status, 3, 128, true)?;
@@ -66,7 +66,7 @@ pub mod users {
         Ok(())
     }
 
-    pub fn set_banner_image_hash(ctx: Context<Modify>, banner_image_hash: String) -> ProgramResult {
+    pub fn set_banner_image_hash(ctx: Context<Modify>, banner_image_hash: String) -> Result<()> {
         let user = &mut ctx.accounts.user;
 
         length_check(&banner_image_hash, 64, 64, false)?;
@@ -75,7 +75,7 @@ pub mod users {
         Ok(())
     }
 
-    pub fn set_extra_one(ctx: Context<Modify>, extra_1: String) -> ProgramResult {
+    pub fn set_extra_one(ctx: Context<Modify>, extra_1: String) -> Result<()> {
         let user = &mut ctx.accounts.user;
 
         length_check(&extra_1, 0, 64, false)?;
@@ -84,7 +84,7 @@ pub mod users {
         Ok(())
     }
 
-    pub fn set_extra_two(ctx: Context<Modify>, extra_2: String) -> ProgramResult {
+    pub fn set_extra_two(ctx: Context<Modify>, extra_2: String) -> Result<()> {
         let user = &mut ctx.accounts.user;
 
         length_check(&extra_2, 0, 64, false)?;
@@ -133,7 +133,7 @@ pub struct User {
     pub extra_2: String,
 }
 
-#[error]
+#[error_code]
 pub enum ErrorCode {
     #[msg("User cannot perform this action")]
     WrongPrivileges,
@@ -155,21 +155,21 @@ impl User {
     + STRING_LENGTH_PREFIX + STRING_LENGTH_EXTRA_2;
 }
 
-fn length_check(field: &String, min_accepted_length: usize, max_accepted_length: usize, is_mandatory: bool) -> ProgramResult {
+fn length_check(field: &String, min_accepted_length: usize, max_accepted_length: usize, is_mandatory: bool) -> Result<()> {
 
     if is_mandatory && field.chars().count() == 0 {
-        return Err(ErrorCode::IncorrectField.into())
+        return Err(error!(ErrorCode::IncorrectField))
     }
 
     if min_accepted_length > max_accepted_length {
-        return Err(ErrorCode::InputError.into())
+        return Err(error!(ErrorCode::InputError))
     } 
     
     if (field.chars().count() >= min_accepted_length && field.chars().count() <= max_accepted_length) || (field.chars().count() == 0) {
         Ok(())
     }
     else {
-        Err(ErrorCode::IncorrectField.into())
+        Err(error!(ErrorCode::IncorrectField))
     }  
     
 }

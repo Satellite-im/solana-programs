@@ -39,7 +39,7 @@ jobs:
       - name: Install Anchor
         run: |
           export PATH=~/.local/share/solana/install/active_release/bin:$PATH
-          npm i -g @project-serum/anchor-cli@0.20.1
+          npm i -g @project-serum/anchor-cli@0.24.2
           cd ${{ github.workspace }}
           yarn install
       - name: Run tests
