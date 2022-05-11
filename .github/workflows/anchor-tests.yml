@@ -42,6 +42,7 @@ jobs:
           npm i -g @project-serum/anchor-cli@0.24.2
           cd ${{ github.workspace }}
           yarn install
+          yarn add ts-mocha
       - name: Run tests
         run: |
           export PATH=~/.local/share/solana/install/active_release/bin:$PATH
