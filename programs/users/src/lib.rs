@@ -22,7 +22,7 @@ pub mod users {
     pub fn create(ctx: Context<Create>, name: String, photo_hash: String, status: String) -> Result<()> {
         let user = &mut ctx.accounts.user;
         
-        // this function do a check for the lenght of the field and has following parameter (field, min_length_accepted, max_length_accepted, is_mandatory)
+        // this function do a check for the length of the field and has following parameter (field, min_length_accepted, max_length_accepted, is_mandatory)
         length_check(&name, 3, 32, true)?;
         user.name = name;
 
