@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 //use std::error::Error;
 //use std::fmt;
 
-declare_id!("7MaC2xrAmmFsuRBEkD6BEL3eJpXCmaikYhLM3eKBPhAH");
+declare_id!("8n2ct4HBadJdtr8T31JvYPTvmYeZyCuLUjkt3CwcSsh9");
 
 const USER_PDA_SEED: &[u8] = b"user";
 const DISCRIMINATOR_LENGTH: usize = 8;
