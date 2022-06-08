@@ -1,9 +1,6 @@
 use anchor_lang::prelude::*;
-//use std::result::Result;
-//use std::error::Error;
-//use std::fmt;
 
-declare_id!("8n2ct4HBadJdtr8T31JvYPTvmYeZyCuLUjkt3CwcSsh9");
+declare_id!("3xjXCBLnaC1Vh7VuqA1SK5G1gpktENVBXMbqJtXMTGZT");
 
 const USER_PDA_SEED: &[u8] = b"user";
 const DISCRIMINATOR_LENGTH: usize = 8;
@@ -14,6 +11,9 @@ const STRING_LENGTH_STATUS: usize = 128;
 const STRING_LENGTH_BANNER_IMAGE_HASH: usize = 64;
 const STRING_LENGTH_EXTRA_1: usize = 64;
 const STRING_LENGTH_EXTRA_2: usize = 64;
+const STRING_LENGTH_URI: usize = 32;
+const PUBKEY_USER_LENGTH: usize = 32;
+const NUM_LENGTH: usize = 1;
 
 #[program]
 pub mod users {
@@ -22,14 +22,17 @@ pub mod users {
     pub fn create(ctx: Context<Create>, name: String, photo_hash: String, status: String) -> Result<()> {
         let user = &mut ctx.accounts.user;
         
-        // this function do a check for the length of the field and has following parameter (field, min_length_accepted, max_length_accepted, is_mandatory)
+        // this function do a check for the lenght of the field and has following parameter (field, min_length_accepted, max_length_accepted, is_mandatory)
         length_check(&name, 3, 32, true)?;
         user.name = name;
 
-        length_check(&photo_hash, 64, 64, true)?;
+        user.signer = ctx.accounts.signer.key();
+        user.payer = ctx.accounts.payer.key();
+
+        length_check(&photo_hash, 64, 64, false)?;
         user.photo_hash = photo_hash;
 
-        length_check(&status, 3, 128, true)?;
+        length_check(&status, 3, 128, false)?;
         user.status = status; 
 
         user.banner_image_hash = "".to_string();
@@ -51,7 +54,7 @@ pub mod users {
     pub fn set_photo_hash(ctx: Context<Modify>, photo_hash: String) -> Result<()> {
         let user = &mut ctx.accounts.user;
         
-        length_check(&photo_hash, 64, 64, true)?;
+        length_check(&photo_hash, 64, 64, false)?;
         user.photo_hash = photo_hash;
 
         Ok(())
@@ -60,7 +63,7 @@ pub mod users {
     pub fn set_status(ctx: Context<Modify>, status: String) -> Result<()> {
         let user = &mut ctx.accounts.user;
 
-        length_check(&status, 3, 128, true)?;
+        length_check(&status, 3, 128, false)?;
         user.status = status;
 
         Ok(())
@@ -91,7 +94,11 @@ pub mod users {
         user.extra_2 = extra_2;
 
         Ok(())
-    }   
+    }
+
+    pub fn close(_ctx: Context<Close>) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -123,9 +130,25 @@ pub struct Modify<'info> {
     pub payer: Signer<'info>,
 }
 
+#[derive(Accounts)]
+pub struct Close<'info> {
+    #[account(
+        mut,
+        close = payer,
+        constraint = signer.key() == user.signer.key() @ ErrorCode::WrongPrivileges,
+        constraint = user.payer.key() == payer.key() @ ErrorCode::PayerMismatch,
+    )]
+    pub user: Account<'info, User>,
+    pub signer: Signer<'info>,
+    #[account(mut)]
+    pub payer: SystemAccount<'info>
+}
+
 #[account]
 pub struct User {
     pub name: String,
+    pub signer: Pubkey,
+    pub payer: Pubkey,
     pub photo_hash: String,
     pub status: String,
     pub banner_image_hash: String,
