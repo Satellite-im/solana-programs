@@ -26,6 +26,7 @@ describe('users', () => {
   // Accounts for the tests.
   const user = anchor.web3.Keypair.generate()
   const impostor = anchor.web3.Keypair.generate()
+  const otherPayer = anchor.web3.Keypair.generate()
   const userAccount = anchor.utils.publicKey.findProgramAddressSync(
     [user.publicKey.toBytes(), userSeed],
     program.programId,
@@ -52,6 +53,7 @@ describe('users', () => {
     assert.ok(userAccountAfter.name == name)
     assert.ok(userAccountAfter.photoHash == photoHash)
     assert.ok(userAccountAfter.status == status)
+    console.log(await provider.connection.getBalance(user.publicKey))
   })
 
   it("Impostor cannot modify another user's name", async () => {
@@ -212,6 +214,51 @@ describe('users', () => {
     let userAccountAfter = await program.account.user.fetch(userAccount[0])
 
     assert.ok(userAccountAfter.name == name)
+    assert.ok(userAccountAfter.photoHash == photoHash)
+    assert.ok(userAccountAfter.status == status)
+    assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
+    assert.ok(userAccountAfter.extra1 == extra1)
+    assert.ok(userAccountAfter.extra2 == extra2)
+  })
+
+  it("Other payers can pay for the transaction in order to modify user's name", async () => {
+      const newName = 'Jhon'
+    try {
+      await program.rpc.setName(newName, {
+        accounts: {
+          user: userAccount[0],
+          signer: user.publicKey,
+          payer: otherPayer.publicKey,
+        },
+        signers: [otherPayer],
+      })
+    } catch (err) {
+        console.log("Error: Signature verification failed")
+    }
+    let userAccountAfter = await program.account.user.fetch(userAccount[0])
+
+    assert.ok(userAccountAfter.name == name)
+    assert.ok(userAccountAfter.photoHash == photoHash)
+    assert.ok(userAccountAfter.status == status)
+    assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
+    assert.ok(userAccountAfter.extra1 == extra1)
+    assert.ok(userAccountAfter.extra2 == extra2)
+  })
+
+  it("Other payers can pay for the transaction in order to modify user's name", async () => {
+    const newName = 'Jhon'
+      await program.rpc.setName(newName, {
+        accounts: {
+          user: userAccount[0],
+          signer: user.publicKey,
+          payer: otherPayer.publicKey,
+        },
+        signers: [otherPayer, user],
+      })
+
+    let userAccountAfter = await program.account.user.fetch(userAccount[0])
+
+    assert.ok(userAccountAfter.name == newName)
     assert.ok(userAccountAfter.photoHash == photoHash)
     assert.ok(userAccountAfter.status == status)
     assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
@@ -396,32 +443,6 @@ describe('users', () => {
     assert.ok(userAccountAfter.extra2 == extra2)
   })
 
-  it('User cannot modify photo with an empty hash', async () => {
-    const newPhotoHash = ''
-    try {
-      await program.rpc.setPhotoHash(newPhotoHash, {
-        accounts: {
-          user: userAccount[0],
-          signer: user.publicKey,
-          payer: user.publicKey,
-        },
-        signers: [user],
-      })
-    } catch (error) {
-      const errMsg = 'The field is too short or too long'
-      assert.equal(error.msg, errMsg)
-    }
-
-    let userAccountAfter = await program.account.user.fetch(userAccount[0])
-
-    assert.ok(userAccountAfter.name == name)
-    assert.ok(userAccountAfter.photoHash == photoHash)
-    assert.ok(userAccountAfter.status == status)
-    assert.ok(userAccountAfter.bannerImageHash == bannerImageHash)
-    assert.ok(userAccountAfter.extra1 == extra1)
-    assert.ok(userAccountAfter.extra2 == extra2)
-  })
-
   it('User modifies status', async () => {
     const newStatus =
       "A long and passionate description which reflects user's personality, but different than the old one"
@@ -446,7 +467,7 @@ describe('users', () => {
     status = newStatus
   })
 
-  it('User cannot modify status with a phrase greater than 128 characters', async () => {
+  it('User cannot modify status with a phrase greater then 128 characters', async () => {
     const newStatus =
       "A long and passionate description which reflects user's personality, but different than the old one".repeat(
         5,
@@ -627,7 +648,7 @@ describe('users', () => {
     extra1 = newExtra1
   })
 
-  it('User cannot modify extra 1 with a phrase greater than 64 characters', async () => {
+  it('User cannot modify extra 1 with a phrase greater then 64 characters', async () => {
     const newExtra1 = 'New data for extra 1 field'.repeat(10)
     try {
       await program.rpc.setExtraOne(newExtra1, {
@@ -700,7 +721,7 @@ describe('users', () => {
     extra2 = newExtra2
   })
 
-  it('User cannot modify extra 2 with a phrase greater than 64 characters', async () => {
+  it('User cannot modify extra 2 with a phrase greater then 64 characters', async () => {
     const newExtra2 = 'New data for extra 2 field'.repeat(10)
     try {
       await program.rpc.setExtraTwo(newExtra2, {
@@ -748,5 +769,57 @@ describe('users', () => {
     assert.ok(userAccountAfter.extra2 == newExtra2)
 
     extra2 = newExtra2
+  })
+
+  it('Impostor cannot close account', async () => {
+
+    try{  
+      await program.rpc.close({
+        accounts: {
+          user: userAccount[0],
+          signer: impostor.publicKey,
+          payer: user.publicKey,
+        },
+        signers: [impostor],
+      })
+    } catch(error) {
+      const errMsg = 'User cannot perform this action'
+      assert.equal(error.msg, errMsg)
+    }
+    console.log(await provider.connection.getBalance(user.publicKey))
+    
+  })
+
+  it('Impostor cannot close account with him as payer', async () => {
+
+    try{
+      await program.rpc.close({
+        accounts: {
+          user: userAccount[0],
+          signer: user.publicKey,
+          payer: impostor.publicKey,
+        },
+        signers: [user],
+      })
+    } catch(error) {
+      const errMsg = 'Account was not created by provided user'
+      assert.equal(error.msg, errMsg)
+    }
+    console.log(await provider.connection.getBalance(user.publicKey))
+    
+  })
+
+  it('Close account', async () => {
+
+    await program.rpc.close({
+      accounts: {
+        user: userAccount[0],
+        signer: user.publicKey,
+        payer: user.publicKey,
+      },
+      signers: [user],
+    })
+    console.log(await provider.connection.getBalance(user.publicKey))
+    
   })
 })
