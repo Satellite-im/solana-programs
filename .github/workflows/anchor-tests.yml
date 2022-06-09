@@ -26,7 +26,7 @@ jobs:
           sudo apt-get install -y clang-7 --allow-unauthenticated
           sudo apt-get install -y libssl1.1 --allow-unauthenticated
           clang-7 --version
-          npm install node
+          npm install node@18.2.0
           node --version
           npm install
           npm install -g yarn
