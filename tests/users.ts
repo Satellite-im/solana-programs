@@ -467,7 +467,7 @@ describe('users', () => {
     status = newStatus
   })
 
-  it('User cannot modify status with a phrase greater then 128 characters', async () => {
+  it('User cannot modify status with a phrase greater than 128 characters', async () => {
     const newStatus =
       "A long and passionate description which reflects user's personality, but different than the old one".repeat(
         5,
@@ -648,7 +648,7 @@ describe('users', () => {
     extra1 = newExtra1
   })
 
-  it('User cannot modify extra 1 with a phrase greater then 64 characters', async () => {
+  it('User cannot modify extra 1 with a phrase greater than 64 characters', async () => {
     const newExtra1 = 'New data for extra 1 field'.repeat(10)
     try {
       await program.rpc.setExtraOne(newExtra1, {
@@ -721,7 +721,7 @@ describe('users', () => {
     extra2 = newExtra2
   })
 
-  it('User cannot modify extra 2 with a phrase greater then 64 characters', async () => {
+  it('User cannot modify extra 2 with a phrase greater than 64 characters', async () => {
     const newExtra2 = 'New data for extra 2 field'.repeat(10)
     try {
       await program.rpc.setExtraTwo(newExtra2, {
