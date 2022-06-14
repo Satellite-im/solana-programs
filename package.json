@@ -1,6 +1,8 @@
 {
   "dependencies": {
+    "@metaplex-foundation/mpl-token-metadata": "^2.1.2",
     "@project-serum/anchor": "^0.20.1",
+    "@solana/spl-token": "^0.2.0",
     "micro-base58": "^0.5.1"
   },
   "devDependencies": {
