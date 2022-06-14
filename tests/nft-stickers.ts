@@ -136,7 +136,6 @@ describe('nft-stickers', () => {
                 signers: [impostor],
             });
         } catch(error) {
-            console.log(error)
             const errMsg = 'A signature was required but not found'
             assert.equal(errMsg, error.logs[4].split('.')[3].split('Error Message: ')[1])
         }
