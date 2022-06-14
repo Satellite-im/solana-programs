@@ -2,6 +2,18 @@
 groupchats = "EGSLBxSQyf8aYgV8gavHy2qhdwdrCRunap6Tv3c7YJWP"
 users = "3xjXCBLnaC1Vh7VuqA1SK5G1gpktENVBXMbqJtXMTGZT"
 friends = "8MnP9XdAKdCvyK6KjRgu9AAGRAb7GmNxSDakqt5z8jTM"
+nft_stickers = "3T7Zj9GsgV6Mj1y3kYBKTkzJ3pQCY2FooFztCtVfpK2X"
+
+[programs.devnet]
+nft_stickers = "3T7Zj9GsgV6Mj1y3kYBKTkzJ3pQCY2FooFztCtVfpK2X"
+
+[[test.genesis]]
+address = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+program = "helper/spl_token.so"
+
+[[test.genesis]]
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+program = "helper/mpl_token_metadata.so"
 
 [registry]
 url = "https://anchor.projectserum.com"
